@@ -8,98 +8,99 @@ class NotificationPage extends StatefulWidget {
 }
 
 class _NotificationPageState extends State<NotificationPage> {
- List<Map<String, dynamic>> _notifications = [
-  {
-    'id': '1',
-    'title': 'Application Viewed',
-    'description': 'Tech Innovators Inc. viewed your application for Senior Flutter Developer',
-    'time': 'Just now',
-    'type': 'application',
-    'read': false,
-    'icon': Icons.visibility,
-    'color': const Color(0xFF2196F3),
-  },
-  {
-    'id': '2',
-    'title': 'Interview Scheduled',
-    'description': 'Your interview with Creative Solutions is scheduled for Friday, 2:00 PM',
-    'time': '30m ago',
-    'type': 'interview',
-    'read': false,
-    'icon': Icons.calendar_today,
-    'color': const Color(0xFF4CAF50),
-  },
-  {
-    'id': '3',
-    'title': 'New Job Match',
-    'description': 'A new "Mobile Lead" position matches your profile at Global Tech.',
-    'time': '2h ago',
-    'type': 'job_match',
-    'read': true,
-    'icon': Icons.work,
-    'color': const Color(0xFFFF9800),
-  },
-  {
-    'id': '4',
-    'title': 'Offer Received!',
-    'description': 'Congratulations! You have received a formal offer from Zenith Systems.',
-    'time': '5h ago',
-    'type': 'offer',
-    'read': false,
-    'icon': Icons.card_giftcard,
-    'color': const Color(0xFFE91E63), // Pink/Red
-  },
-  {
-    'id': '5',
-    'title': 'Message Received',
-    'description': 'John from Cloud Systems: "Are you available for a quick call tomorrow?"',
-    'time': 'Yesterday',
-    'type': 'message',
-    'read': true,
-    'icon': Icons.chat,
-    'color': const Color(0xFF00BCD4),
-  },
-  {
-    'id': '6',
-    'title': 'Profile Viewed',
-    'description': '3 different recruiters viewed your profile in the last 24 hours.',
-    'time': '1d ago',
-    'type': 'profile',
-    'read': true,
-    'icon': Icons.person_search,
-    'color': const Color(0xFF607D8B),
-  },
-  {
-    'id': '7',
-    'title': 'Assessment Required',
-    'description': 'Please complete the Dart Logic test for the Junior Dev position.',
-    'time': '2d ago',
-    'type': 'reminder',
-    'read': true,
-    'icon': Icons.assignment,
-    'color': const Color(0xFF795548),
-  },
-  {
-    'id': '8',
-    'title': 'Saved Job Expiring',
-    'description': 'The "UI Designer" role at Pixel Perfect closes in 12 hours.',
-    'time': '3d ago',
-    'type': 'reminder',
-    'read': true,
-    'icon': Icons.timer,
-    'color': const Color(0xFFF44336),
-  },
-  {
-    'id': '9',
-    'title': 'Referral Success',
-    'description': 'Your friend Sarah just applied using your link. Bonus pending!',
-    'time': '1w ago',
-    'type': 'referral',
-    'read': true,
-    'icon': Icons.group_add,
-    'color': const Color(0xFF673AB7), // Deep Purple
-  },
-];
+  // Added 'final' to satisfy linting
+  final List<Map<String, dynamic>> _notifications = [
+    {
+      'id': '1',
+      'title': 'Application Viewed',
+      'description': 'Tech Innovators Inc. viewed your application for Senior Flutter Developer',
+      'time': 'Just now',
+      'type': 'application',
+      'read': false,
+      'icon': Icons.visibility,
+      'color': const Color(0xFF2196F3),
+    },
+    {
+      'id': '2',
+      'title': 'Interview Scheduled',
+      'description': 'Your interview with Creative Solutions is scheduled for Friday, 2:00 PM',
+      'time': '30m ago',
+      'type': 'interview',
+      'read': false,
+      'icon': Icons.calendar_today,
+      'color': const Color(0xFF4CAF50),
+    },
+    {
+      'id': '3',
+      'title': 'New Job Match',
+      'description': 'A new "Mobile Lead" position matches your profile at Global Tech.',
+      'time': '2h ago',
+      'type': 'job_match',
+      'read': true,
+      'icon': Icons.work,
+      'color': const Color(0xFFFF9800),
+    },
+    {
+      'id': '4',
+      'title': 'Offer Received!',
+      'description': 'Congratulations! You have received a formal offer from Zenith Systems.',
+      'time': '5h ago',
+      'type': 'offer',
+      'read': false,
+      'icon': Icons.card_giftcard,
+      'color': const Color(0xFFE91E63),
+    },
+    {
+      'id': '5',
+      'title': 'Message Received',
+      'description': 'John from Cloud Systems: "Are you available for a quick call tomorrow?"',
+      'time': 'Yesterday',
+      'type': 'message',
+      'read': true,
+      'icon': Icons.chat,
+      'color': const Color(0xFF00BCD4),
+    },
+    {
+      'id': '6',
+      'title': 'Profile Viewed',
+      'description': '3 different recruiters viewed your profile in the last 24 hours.',
+      'time': '1d ago',
+      'type': 'profile',
+      'read': true,
+      'icon': Icons.person_search,
+      'color': const Color(0xFF607D8B),
+    },
+    {
+      'id': '7',
+      'title': 'Assessment Required',
+      'description': 'Please complete the Dart Logic test for the Junior Dev position.',
+      'time': '2d ago',
+      'type': 'reminder',
+      'read': true,
+      'icon': Icons.assignment,
+      'color': const Color(0xFF795548),
+    },
+    {
+      'id': '8',
+      'title': 'Saved Job Expiring',
+      'description': 'The "UI Designer" role at Pixel Perfect closes in 12 hours.',
+      'time': '3d ago',
+      'type': 'reminder',
+      'read': true,
+      'icon': Icons.timer,
+      'color': const Color(0xFFF44336),
+    },
+    {
+      'id': '9',
+      'title': 'Referral Success',
+      'description': 'Your friend Sarah just applied using your link. Bonus pending!',
+      'time': '1w ago',
+      'type': 'referral',
+      'read': true,
+      'icon': Icons.group_add,
+      'color': const Color(0xFF673AB7),
+    },
+  ];
 
   @override
   Widget build(BuildContext context) {
@@ -107,7 +108,6 @@ class _NotificationPageState extends State<NotificationPage> {
       backgroundColor: const Color(0xFFF5F5F5),
       body: Column(
         children: [
-          // Header
           Container(
             decoration: const BoxDecoration(
               gradient: LinearGradient(
@@ -125,7 +125,7 @@ class _NotificationPageState extends State<NotificationPage> {
             child: Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
-                Expanded( // FIXED: Prevents text from pushing icons off screen
+                Expanded(
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: const [
@@ -145,9 +145,7 @@ class _NotificationPageState extends State<NotificationPage> {
               ],
             ),
           ),
-
           _buildBulkActions(),
-
           Expanded(
             child: ListView.separated(
               padding: const EdgeInsets.all(16),
@@ -161,20 +159,18 @@ class _NotificationPageState extends State<NotificationPage> {
     );
   }
 
-  // FIXED: Wrapped internal rows to prevent horizontal overflow on small screens
   Widget _buildBulkActions() {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
       color: Colors.white,
       child: Row(
         children: [
-          Expanded( // FIXED: Unread count takes available space
+          Expanded(
             child: Text(
               '${_notifications.where((n) => !n['read']).length} unread notifications',
               style: const TextStyle(fontSize: 13, color: Color(0xFF666666)),
             ),
           ),
-          // Actions
           TextButton(
             onPressed: () {},
             child: const Text('Read all', style: TextStyle(fontSize: 12, color: Color(0xFFB30000))),
@@ -205,20 +201,18 @@ class _NotificationPageState extends State<NotificationPage> {
           child: Row(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              // Icon Circle
+              // FIXED: withOpacity -> withValues
               Container(
                 width: 48,
                 height: 48,
                 decoration: BoxDecoration(
-                  color: color.withOpacity(0.1),
+                  color: color.withValues(alpha: 0.1),
                   shape: BoxShape.circle,
                 ),
                 child: Icon(notification['icon'], color: color, size: 24),
               ),
               const SizedBox(width: 16),
-
-              // Content Area
-              Expanded( // FIXED: Essential to prevent overflow
+              Expanded(
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
@@ -226,7 +220,7 @@ class _NotificationPageState extends State<NotificationPage> {
                       mainAxisAlignment: MainAxisAlignment.spaceBetween,
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        Expanded( // FIXED: Prevents long title from overlapping time
+                        Expanded(
                           child: Text(
                             notification['title'],
                             style: TextStyle(
@@ -260,34 +254,32 @@ class _NotificationPageState extends State<NotificationPage> {
                       overflow: TextOverflow.ellipsis,
                     ),
                     const SizedBox(height: 12),
-                    
-                    // Footer Actions: Tag and Button
                     Row(
                       mainAxisAlignment: MainAxisAlignment.spaceBetween,
                       children: [
-                        // Type Tag
+                        // FIXED: withOpacity -> withValues
                         Container(
                           padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
                           decoration: BoxDecoration(
-                            color: color.withOpacity(0.1),
+                            color: color.withValues(alpha: 0.1),
                             borderRadius: BorderRadius.circular(12),
-                            border: Border.all(color: color.withOpacity(0.2)),
+                            border: Border.all(color: color.withValues(alpha: 0.2)),
                           ),
                           child: Text(
                             type.toUpperCase(),
                             style: TextStyle(fontSize: 10, color: color, fontWeight: FontWeight.bold),
                           ),
                         ),
-                        // Mark as Read Button
+                        // FIXED: withOpacity -> withValues
                         GestureDetector(
                           onTap: () {},
                           child: Container(
                             padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
                             decoration: BoxDecoration(
-                              color: read ? Colors.transparent : const Color(0xFFB30000).withOpacity(0.1),
+                              color: read ? Colors.transparent : const Color(0xFFB30000).withValues(alpha: 0.1),
                               borderRadius: BorderRadius.circular(8),
                               border: Border.all(
-                                color: read ? Colors.grey[300]! : const Color(0xFFB30000).withOpacity(0.3),
+                                color: read ? Colors.grey[300]! : const Color(0xFFB30000).withValues(alpha: 0.3),
                               ),
                             ),
                             child: Text(
@@ -312,7 +304,6 @@ class _NotificationPageState extends State<NotificationPage> {
     );
   }
 
-  // Header helpers...
   Widget _buildHeaderActions() {
     return Row(
       mainAxisSize: MainAxisSize.min,
@@ -326,7 +317,11 @@ class _NotificationPageState extends State<NotificationPage> {
   Widget _buildFilterButton() {
     return Container(
       padding: const EdgeInsets.all(8),
-      decoration: BoxDecoration(color: Colors.white.withOpacity(0.2), shape: BoxShape.circle),
+      // FIXED: withOpacity -> withValues
+      decoration: BoxDecoration(
+        color: Colors.white.withValues(alpha: 0.2), 
+        shape: BoxShape.circle
+      ),
       child: const Icon(Icons.filter_list, color: Colors.white, size: 20),
     );
   }

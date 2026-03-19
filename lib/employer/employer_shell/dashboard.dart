@@ -69,7 +69,7 @@ class _EmployerDashboardState extends State<EmployerDashboard> {
       child: Container(
         padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
         decoration: BoxDecoration(
-          color: isSelected ? const Color(0xFFB30000).withOpacity(0.08) : Colors.transparent,
+          color: isSelected ? const Color(0xFFB30000).withValues(alpha: 0.08) : Colors.transparent,
           borderRadius: BorderRadius.circular(10),
         ),
         child: Stack(
@@ -184,7 +184,7 @@ class DashboardContent extends StatelessWidget {
                   Container(
                     padding: const EdgeInsets.all(8),
                     decoration: BoxDecoration(
-                      color: Colors.white.withOpacity(0.2),
+                      color: Colors.white.withValues(alpha: 0.2),
                       shape: BoxShape.circle,
                     ),
                     child: const Icon(Icons.business, color: Colors.white, size: 20),
@@ -221,7 +221,7 @@ class DashboardContent extends StatelessWidget {
                   borderRadius: BorderRadius.circular(12),
                   boxShadow: [
                     BoxShadow(
-                      color: Colors.black.withOpacity(0.05),
+                      color: Colors.black.withValues(alpha: 0.08),
                       blurRadius: 8,
                       offset: const Offset(0, 2),
                     ),
@@ -275,7 +275,7 @@ class DashboardContent extends StatelessWidget {
                   borderRadius: BorderRadius.circular(12),
                   boxShadow: [
                     BoxShadow(
-                      color: Colors.black.withOpacity(0.05),
+                      color: Colors.black.withValues(alpha: 0.08),
                       blurRadius: 8,
                       offset: const Offset(0, 2),
                     ),
@@ -379,7 +379,7 @@ class _ApplicationItem extends StatelessWidget {
         height: 40,
         decoration: BoxDecoration(
           shape: BoxShape.circle,
-          color: const Color(0xFFB30000).withOpacity(0.1),
+          color: const Color(0xFFB30000).withValues(alpha: 0.08),
         ),
         child: const Icon(Icons.person, color: Color(0xFFB30000)),
       ),

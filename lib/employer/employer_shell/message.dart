@@ -102,7 +102,8 @@ class _MessagePageState extends State<MessagePage> {
                 Container(
                   padding: const EdgeInsets.all(8),
                   decoration: BoxDecoration(
-                    color: Colors.white.withOpacity(0.2),
+                    // FIXED: withOpacity -> withValues
+                    color: Colors.white.withValues(alpha: 0.2),
                     shape: BoxShape.circle,
                   ),
                   child: const Icon(Icons.search, color: Colors.white, size: 20),
@@ -150,8 +151,9 @@ class _MessagePageState extends State<MessagePage> {
                           shape: BoxShape.circle,
                           border: Border.all(
                             color: message['isEmployer']
-                                ? const Color(0xFFB30000).withOpacity(0.3)
-                                : const Color(0xFF666666).withOpacity(0.3),
+                                // FIXED: withOpacity -> withValues
+                                ? const Color(0xFFB30000).withValues(alpha: 0.3)
+                                : const Color(0xFF666666).withValues(alpha: 0.3),
                             width: 2.5,
                           ),
                           boxShadow: const [
@@ -303,7 +305,6 @@ class _ChatDetailPageState extends State<ChatDetailPage> {
       backgroundColor: const Color(0xFFF5F5F5),
       body: Column(
         children: [
-          // Updated Header with Profile Picture
           Container(
             height: MediaQuery.of(context).padding.top + 90,
             decoration: const BoxDecoration(
@@ -332,7 +333,6 @@ class _ChatDetailPageState extends State<ChatDetailPage> {
                   icon: const Icon(Icons.arrow_back, color: Colors.white),
                   onPressed: () => Navigator.pop(context),
                 ),
-                // --- ADDED PROFILE PICTURE HERE ---
                 Container(
                   width: 45,
                   height: 45,

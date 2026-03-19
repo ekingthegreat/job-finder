@@ -177,7 +177,12 @@ class ApplicationsPage extends StatelessWidget {
         color: Colors.white,
         borderRadius: BorderRadius.circular(16),
         boxShadow: [
-          BoxShadow(color: Colors.black.withOpacity(0.04), blurRadius: 10, offset: const Offset(0, 4)),
+          BoxShadow(
+            // FIXED: withOpacity -> withValues
+            color: Colors.black.withValues(alpha: 0.04), 
+            blurRadius: 10, 
+            offset: const Offset(0, 4)
+          ),
         ],
       ),
       child: Column(
@@ -251,7 +256,8 @@ class ApplicationsPage extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
       decoration: BoxDecoration(
-        color: color.withOpacity(0.1),
+        // FIXED: withOpacity -> withValues
+        color: color.withValues(alpha: 0.1),
         borderRadius: BorderRadius.circular(8),
       ),
       child: Text(

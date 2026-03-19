@@ -126,9 +126,15 @@ class _PostJobPageState extends State<PostJobPage> {
         child: Column(
           children: [
             Container(
-              decoration: const BoxDecoration(
-                gradient: LinearGradient(colors: [Color(0xFFB30000), Color(0xFF8A0000)]),
-                boxShadow: [BoxShadow(color: Colors.black26, blurRadius: 12, offset: Offset(0, 2))],
+              decoration: BoxDecoration(
+                gradient: const LinearGradient(colors: [Color(0xFFB30000), Color(0xFF8A0000)]),
+                boxShadow: [
+                  BoxShadow(
+                    color: Colors.black.withValues(alpha: 0.26),
+                    blurRadius: 12,
+                    offset: const Offset(0, 2),
+                  )
+                ],
               ),
               padding: EdgeInsets.fromLTRB(20, MediaQuery.of(context).padding.top + 10, 20, 25),
               child: const Row(
@@ -150,9 +156,13 @@ class _PostJobPageState extends State<PostJobPage> {
             if (_myPostedJobs.isNotEmpty) ...[
               const Padding(
                 padding: EdgeInsets.symmetric(horizontal: 20, vertical: 10),
-                child: Align(alignment: Alignment.centerLeft, child: Text("Manage Listings", style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold))),
+                child: Align(
+                  alignment: Alignment.centerLeft,
+                  child: Text("Manage Listings", style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
+                ),
               ),
-              ..._myPostedJobs.map((job) => _buildJobManagementCard(job)).toList(),
+              // FIXED: Removed unnecessary .toList()
+              ..._myPostedJobs.map((job) => _buildJobManagementCard(job)),
             ],
             const SizedBox(height: 40),
           ],
@@ -165,7 +175,16 @@ class _PostJobPageState extends State<PostJobPage> {
     return Container(
       margin: const EdgeInsets.all(16),
       padding: const EdgeInsets.all(20),
-      decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(15), boxShadow: const [BoxShadow(color: Colors.black12, blurRadius: 10)]),
+      decoration: BoxDecoration(
+        color: Colors.white, 
+        borderRadius: BorderRadius.circular(15), 
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withValues(alpha: 0.12),
+            blurRadius: 10,
+          )
+        ],
+      ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
@@ -187,7 +206,8 @@ class _PostJobPageState extends State<PostJobPage> {
             children: [
               Expanded(
                 child: DropdownButtonFormField<String>(
-                  value: _selectedType,
+                  // FIXED: Changed value to initialValue
+                  initialValue: _selectedType,
                   items: ['Full-time', 'Part-time', 'Remote', 'Contract'].map((t) => DropdownMenuItem(value: t, child: Text(t))).toList(),
                   onChanged: (val) => setState(() => _selectedType = val!),
                   decoration: const InputDecoration(labelText: "Job Type"),
@@ -221,10 +241,17 @@ class _PostJobPageState extends State<PostJobPage> {
 
     return Container(
       margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-      decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(15), border: Border.all(color: Colors.grey.shade200)),
+      decoration: BoxDecoration(
+        color: Colors.white, 
+        borderRadius: BorderRadius.circular(15), 
+        border: Border.all(color: Colors.grey.shade200),
+      ),
       child: ExpansionTile(
         tilePadding: const EdgeInsets.symmetric(horizontal: 20, vertical: 8),
-        leading: const CircleAvatar(backgroundColor: Color(0xFFFFF5F5), child: Icon(Icons.list_alt, color: Color(0xFFB30000))),
+        leading: CircleAvatar(
+          backgroundColor: const Color(0xFFB30000).withValues(alpha: 0.1),
+          child: const Icon(Icons.list_alt, color: Color(0xFFB30000)),
+        ),
         title: Text(job['title'], style: const TextStyle(fontWeight: FontWeight.bold)),
         subtitle: Text("${job['company']} • ${job['vacancies']} Vacant Slots"),
         trailing: IconButton(icon: const Icon(Icons.delete_outline, color: Colors.red), onPressed: () => _deleteJob(job['id'])),
@@ -233,6 +260,7 @@ class _PostJobPageState extends State<PostJobPage> {
           if (applicants.isEmpty)
             const Padding(padding: EdgeInsets.all(20), child: Text("No applicants yet."))
           else
+            // FIXED: Removed unnecessary .toList()
             ...applicants.asMap().entries.map((entry) {
               int idx = entry.key;
               Map<String, String> user = entry.value;
@@ -245,7 +273,16 @@ class _PostJobPageState extends State<PostJobPage> {
                       contentPadding: EdgeInsets.zero,
                       leading: const CircleAvatar(child: Icon(Icons.person)),
                       title: Text(user['name']!, style: const TextStyle(fontWeight: FontWeight.bold)),
-                      subtitle: Text("Status: ${user['status']}", style: TextStyle(color: user['status'] == 'Accepted' ? Colors.green : user['status'] == 'Declined' ? Colors.red : Colors.blue)),
+                      subtitle: Text(
+                        "Status: ${user['status']}", 
+                        style: TextStyle(
+                          color: user['status'] == 'Accepted' 
+                            ? Colors.green 
+                            : user['status'] == 'Declined' 
+                              ? Colors.red 
+                              : Colors.blue
+                        ),
+                      ),
                       trailing: ElevatedButton(
                         style: ElevatedButton.styleFrom(backgroundColor: Colors.grey[200], elevation: 0),
                         onPressed: () => _viewUserProfile(user),
@@ -272,7 +309,7 @@ class _PostJobPageState extends State<PostJobPage> {
                   ],
                 ),
               );
-            }).toList(),
+            }),
           const SizedBox(height: 10),
         ],
       ),

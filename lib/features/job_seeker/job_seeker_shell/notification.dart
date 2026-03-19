@@ -8,7 +8,6 @@ class NotificationPage extends StatefulWidget {
 }
 
 class _NotificationPageState extends State<NotificationPage> {
-  // FIXED: Added 'final' to resolve the prefer_final_fields warning
   final List<Map<String, dynamic>> _notifications = [
     {
       'id': '1',
@@ -48,7 +47,7 @@ class _NotificationPageState extends State<NotificationPage> {
       'type': 'offer',
       'read': false,
       'icon': Icons.card_giftcard,
-      'color': const Color(0xFFE91E63), // Pink/Red
+      'color': const Color(0xFFE91E63),
     },
     {
       'id': '5',
@@ -98,7 +97,7 @@ class _NotificationPageState extends State<NotificationPage> {
       'type': 'referral',
       'read': true,
       'icon': Icons.group_add,
-      'color': const Color(0xFF673AB7), // Deep Purple
+      'color': const Color(0xFF673AB7),
     },
   ];
 
@@ -108,9 +107,7 @@ class _NotificationPageState extends State<NotificationPage> {
       backgroundColor: const Color(0xFFF5F5F5),
       body: Column(
         children: [
-          // Header
           Container(
-            // FIXED: Added 'const' to resolve prefer_const_constructors warnings
             decoration: const BoxDecoration(
               gradient: LinearGradient(
                 colors: [Color(0xFFB30000), Color(0xFF8A0000)],
@@ -209,7 +206,8 @@ class _NotificationPageState extends State<NotificationPage> {
                 width: 48,
                 height: 48,
                 decoration: BoxDecoration(
-                  color: color.withOpacity(0.1),
+                  // FIXED: withOpacity -> withValues
+                  color: color.withValues(alpha: 0.1),
                   shape: BoxShape.circle,
                 ),
                 child: Icon(notification['icon'], color: color, size: 24),
@@ -263,9 +261,10 @@ class _NotificationPageState extends State<NotificationPage> {
                         Container(
                           padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
                           decoration: BoxDecoration(
-                            color: color.withOpacity(0.1),
+                            // FIXED: withOpacity -> withValues
+                            color: color.withValues(alpha: 0.1),
                             borderRadius: BorderRadius.circular(12),
-                            border: Border.all(color: color.withOpacity(0.2)),
+                            border: Border.all(color: color.withValues(alpha: 0.2)),
                           ),
                           child: Text(
                             type.toUpperCase(),
@@ -277,10 +276,11 @@ class _NotificationPageState extends State<NotificationPage> {
                           child: Container(
                             padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
                             decoration: BoxDecoration(
-                              color: read ? Colors.transparent : const Color(0xFFB30000).withOpacity(0.1),
+                              color: read ? Colors.transparent : const Color(0xFFB30000).withValues(alpha: 0.1),
                               borderRadius: BorderRadius.circular(8),
                               border: Border.all(
-                                color: read ? Colors.grey[300]! : const Color(0xFFB30000).withOpacity(0.3),
+                                // FIXED: withOpacity -> withValues
+                                color: read ? Colors.grey[300]! : const Color(0xFFB30000).withValues(alpha: 0.3),
                               ),
                             ),
                             child: Text(
@@ -318,7 +318,11 @@ class _NotificationPageState extends State<NotificationPage> {
   Widget _buildFilterButton() {
     return Container(
       padding: const EdgeInsets.all(8),
-      decoration: BoxDecoration(color: Colors.white.withOpacity(0.2), shape: BoxShape.circle),
+      decoration: BoxDecoration(
+        // FIXED: withOpacity -> withValues
+        color: Colors.white.withValues(alpha: 0.2), 
+        shape: BoxShape.circle
+      ),
       child: const Icon(Icons.filter_list, color: Colors.white, size: 20),
     );
   }

@@ -287,7 +287,7 @@ class _JobListContent extends StatelessWidget {
                   decoration: BoxDecoration(
                     color: const Color(0xFFFFF5F5),
                     borderRadius: BorderRadius.circular(15),
-                    border: Border.all(color: const Color(0xFFB30000).withOpacity(0.2)),
+                    border: Border.all(color: const Color(0xFFB30000).withValues(alpha: 0.08)),
                   ),
                   child: Column(
                     children: [

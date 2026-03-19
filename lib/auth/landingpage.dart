@@ -25,7 +25,6 @@ class _LandingPageState extends State<LandingPage> with TickerProviderStateMixin
     _fadeController.forward();
 
     _scrollController.addListener(() {
-      // Adjusted threshold to match the curved header height
       if (_scrollController.offset > 200 && !_isAppBarVisible) {
         setState(() => _isAppBarVisible = true);
       } else if (_scrollController.offset <= 200 && _isAppBarVisible) {
@@ -158,7 +157,8 @@ class _LandingPageState extends State<LandingPage> with TickerProviderStateMixin
             Container(
               padding: const EdgeInsets.all(25),
               decoration: BoxDecoration(
-                color: Colors.white.withOpacity(0.12),
+                // FIXED: withOpacity -> withValues
+                color: Colors.white.withValues(alpha: 0.12),
                 shape: BoxShape.circle,
               ),
               child: const Icon(Icons.work_rounded, size: 85, color: Colors.white),
@@ -178,7 +178,8 @@ class _LandingPageState extends State<LandingPage> with TickerProviderStateMixin
               height: 3,
               width: 40,
               decoration: BoxDecoration(
-                color: Colors.white.withOpacity(0.5),
+                // FIXED: withOpacity -> withValues
+                color: Colors.white.withValues(alpha: 0.5),
                 borderRadius: BorderRadius.circular(10),
               ),
             ),
@@ -188,7 +189,6 @@ class _LandingPageState extends State<LandingPage> with TickerProviderStateMixin
     );
   }
 
-  // UPDATED: This now only shows the white background bar without the text/button
   Widget _buildAnimatedAppBar() {
     return AnimatedContainer(
       duration: const Duration(milliseconds: 300),
@@ -199,13 +199,14 @@ class _LandingPageState extends State<LandingPage> with TickerProviderStateMixin
         boxShadow: [
           if (_isAppBarVisible)
             BoxShadow(
-              color: Colors.black.withOpacity(0.08),
+              // FIXED: withOpacity -> withValues
+              color: Colors.black.withValues(alpha: 0.08),
               blurRadius: 10,
               offset: const Offset(0, 2),
             ),
         ],
       ),
-      child: const SizedBox.shrink(), // Content removed as requested
+      child: const SizedBox.shrink(),
     );
   }
 
@@ -218,7 +219,8 @@ class _LandingPageState extends State<LandingPage> with TickerProviderStateMixin
           Container(
             padding: const EdgeInsets.all(12),
             decoration: BoxDecoration(
-              color: const Color(0xFFB30000).withOpacity(0.08),
+              // FIXED: withOpacity -> withValues
+              color: const Color(0xFFB30000).withValues(alpha: 0.08),
               borderRadius: BorderRadius.circular(12),
             ),
             child: Icon(icon, color: const Color(0xFFB30000), size: 26),
@@ -257,7 +259,8 @@ class _LandingPageState extends State<LandingPage> with TickerProviderStateMixin
         borderRadius: BorderRadius.circular(18),
         boxShadow: [
           BoxShadow(
-            color: const Color(0xFFB30000).withOpacity(0.25),
+            // FIXED: withOpacity -> withValues
+            color: const Color(0xFFB30000).withValues(alpha: 0.25),
             blurRadius: 15,
             offset: const Offset(0, 8),
           ),

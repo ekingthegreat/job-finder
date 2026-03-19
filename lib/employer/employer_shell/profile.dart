@@ -76,7 +76,6 @@ class EmployerProfile extends StatelessWidget {
                             mainAxisSize: MainAxisSize.min,
                             children: [
                               SizedBox(height: statusBarHeight + 20),
-                              // Company Logo / Profile Photo
                               Container(
                                 width: screenWidth * 0.22,
                                 height: screenWidth * 0.22,
@@ -86,10 +85,11 @@ class EmployerProfile extends StatelessWidget {
                                 ),
                                 child: ClipOval(
                                   child: Image.asset(
-                                    'img/3.jpg', // Local asset path
+                                    'img/3.jpg',
                                     fit: BoxFit.cover,
                                     errorBuilder: (context, error, stackTrace) => Container(
-                                      color: Colors.white24,
+                                      // FIXED: withOpacity -> withValues
+                                      color: Colors.white.withValues(alpha: 0.24),
                                       child: Icon(Icons.business, color: Colors.white, size: screenWidth * 0.1),
                                     ),
                                   ),
@@ -113,7 +113,6 @@ class EmployerProfile extends StatelessWidget {
                                 ),
                               ),
                               const SizedBox(height: 20),
-                              // FUNCTIONAL SWITCH BUTTON
                               ElevatedButton.icon(
                                 onPressed: () {
                                   Navigator.pushReplacement(
@@ -149,7 +148,6 @@ class EmployerProfile extends StatelessWidget {
                     padding: EdgeInsets.all(screenWidth * 0.04),
                     child: Column(
                       children: [
-                        // Current Role Card
                         _buildProfileCard(screenWidth, 'Current Role', titleFontSize, [
                           ListTile(
                             leading: const Icon(Icons.business_center, color: Color(0xFFB30000)),
@@ -167,7 +165,6 @@ class EmployerProfile extends StatelessWidget {
                         ]),
                         const SizedBox(height: 16),
 
-                        // Company Information Card
                         _buildProfileCard(screenWidth, 'Company Information', titleFontSize, [
                           _buildInfoRow(Icons.business, 'Company Name', 'Tech Solutions Inc.', smallFontSize, bodyFontSize),
                           _buildInfoRow(Icons.email, 'Company Email', 'contact@techsolutions.com', smallFontSize, bodyFontSize),
@@ -177,7 +174,6 @@ class EmployerProfile extends StatelessWidget {
                         ]),
                         const SizedBox(height: 16),
 
-                        // Employer Stats Card
                         _buildProfileCard(screenWidth, 'Employer Stats', titleFontSize, [
                           _buildStatRow(Icons.work, 'Active Jobs', '12', smallFontSize, bodyFontSize),
                           const Divider(height: 1),
@@ -187,7 +183,6 @@ class EmployerProfile extends StatelessWidget {
                         ]),
                         const SizedBox(height: 16),
 
-                        // Account Settings Card
                         _buildProfileCard(screenWidth, 'Account Settings', titleFontSize, [
                           _buildActionTile(Icons.settings, 'Employer Settings', 'Manage hiring preferences', smallFontSize, bodyFontSize),
                           const Divider(height: 1),
@@ -195,7 +190,6 @@ class EmployerProfile extends StatelessWidget {
                         ]),
                         const SizedBox(height: 20),
 
-                        // Logout
                         _buildLogoutButton(bodyFontSize),
                         const SizedBox(height: 40),
                       ],
@@ -218,7 +212,14 @@ class EmployerProfile extends StatelessWidget {
       decoration: BoxDecoration(
         color: Colors.white,
         borderRadius: BorderRadius.circular(15),
-        boxShadow: [BoxShadow(color: Colors.black.withOpacity(0.05), blurRadius: 10, offset: const Offset(0, 4))],
+        boxShadow: [
+          BoxShadow(
+            // FIXED: withOpacity -> withValues
+            color: Colors.black.withValues(alpha: 0.05), 
+            blurRadius: 10, 
+            offset: const Offset(0, 4)
+          )
+        ],
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -265,7 +266,10 @@ class EmployerProfile extends StatelessWidget {
       decoration: BoxDecoration(
         color: Colors.white,
         borderRadius: BorderRadius.circular(15),
-        border: Border.all(color: const Color(0xFFB30000).withOpacity(0.2)),
+        border: Border.all(
+          // FIXED: withOpacity -> withValues
+          color: const Color(0xFFB30000).withValues(alpha: 0.2)
+        ),
       ),
       child: ListTile(
         leading: const Icon(Icons.logout, color: Color(0xFFB30000)),
@@ -278,7 +282,11 @@ class EmployerProfile extends StatelessWidget {
   Widget _buildBadge(String text, double fontSize) {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
-      decoration: BoxDecoration(color: const Color(0xFFB30000).withOpacity(0.1), borderRadius: BorderRadius.circular(20)),
+      decoration: BoxDecoration(
+        // FIXED: withOpacity -> withValues
+        color: const Color(0xFFB30000).withValues(alpha: 0.1), 
+        borderRadius: BorderRadius.circular(20)
+      ),
       child: Text(text, style: TextStyle(fontSize: fontSize - 2, color: const Color(0xFFB30000), fontWeight: FontWeight.bold)),
     );
   }

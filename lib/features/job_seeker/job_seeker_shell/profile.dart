@@ -28,7 +28,7 @@ class ProfilePage extends StatelessWidget {
                 children: [
                   // --- RED HEADER BANNER ---
                   Container(
-                    height: screenHeight * 0.45, // Adjusted for name + title + button
+                    height: screenHeight * 0.45, 
                     padding: const EdgeInsets.only(bottom: 20),
                     decoration: const BoxDecoration(
                       gradient: LinearGradient(
@@ -43,7 +43,6 @@ class ProfilePage extends StatelessWidget {
                     ),
                     child: Stack(
                       children: [
-                        // Top Navigation Row
                         Positioned(
                           top: statusBarHeight + 10,
                           left: 10,
@@ -71,14 +70,12 @@ class ProfilePage extends StatelessWidget {
                           ),
                         ),
                         
-                        // Center Content
                         Align(
                           alignment: Alignment.center,
                           child: Column(
                             mainAxisSize: MainAxisSize.min,
                             children: [
                               SizedBox(height: statusBarHeight + 20),
-                              // Profile Photo
                               Container(
                                 width: screenWidth * 0.22,
                                 height: screenWidth * 0.22,
@@ -91,14 +88,14 @@ class ProfilePage extends StatelessWidget {
                                     'img/3.jpg',
                                     fit: BoxFit.cover,
                                     errorBuilder: (context, error, stackTrace) => Container(
-                                      color: Colors.white24,
+                                      // FIXED: withOpacity -> withValues
+                                      color: Colors.white.withValues(alpha: 0.24),
                                       child: Icon(Icons.person, color: Colors.white, size: screenWidth * 0.1),
                                     ),
                                   ),
                                 ),
                               ),
                               const SizedBox(height: 12),
-                              // User Name
                               Text(
                                 'John Doe',
                                 style: TextStyle(
@@ -107,7 +104,6 @@ class ProfilePage extends StatelessWidget {
                                   fontWeight: FontWeight.bold,
                                 ),
                               ),
-                              // User Title
                               Text(
                                 'Software Developer',
                                 style: TextStyle(
@@ -118,7 +114,6 @@ class ProfilePage extends StatelessWidget {
                               ),
                               const SizedBox(height: 20),
                               
-                              // Functional Switch Button
                               ElevatedButton.icon(
                                 onPressed: () {
                                   Navigator.pushReplacement(
@@ -154,7 +149,6 @@ class ProfilePage extends StatelessWidget {
                     padding: EdgeInsets.all(screenWidth * 0.04),
                     child: Column(
                       children: [
-                        // Current Role
                         _buildProfileCard(screenWidth, 'Current Role', titleFontSize, [
                           ListTile(
                             leading: const Icon(Icons.person_pin, color: Color(0xFFB30000)),
@@ -171,7 +165,6 @@ class ProfilePage extends StatelessWidget {
                         ]),
                         const SizedBox(height: 16),
 
-                        // Personal Info
                         _buildProfileCard(screenWidth, 'Personal Information', titleFontSize, [
                           _buildInfoRow(Icons.email, 'Email', 'john.doe@gmail.com', smallFontSize, bodyFontSize),
                           _buildInfoRow(Icons.phone, 'Phone', '09898878', smallFontSize, bodyFontSize),
@@ -180,14 +173,12 @@ class ProfilePage extends StatelessWidget {
                         ]),
                         const SizedBox(height: 16),
 
-                        // Professional Info
                         _buildProfileCard(screenWidth, 'Professional Information', titleFontSize, [
                           _buildInfoRow(Icons.work, 'Experience', '5 Yrs Experience', smallFontSize, bodyFontSize),
                           _buildInfoRow(Icons.school, 'Education', "Master's in CS", smallFontSize, bodyFontSize),
                         ]),
                         const SizedBox(height: 16),
 
-                        // Resume & Documents
                         _buildProfileCard(screenWidth, 'Resume & Documents', titleFontSize, [
                           _buildActionTile(Icons.description, 'Resume.pdf', 'Updated 2 days ago', smallFontSize, bodyFontSize),
                           const Divider(height: 1),
@@ -195,7 +186,6 @@ class ProfilePage extends StatelessWidget {
                         ]),
                         const SizedBox(height: 16),
 
-                        // Account Settings
                         _buildProfileCard(screenWidth, 'Account Settings', titleFontSize, [
                           _buildActionTile(Icons.settings, 'Preferences', 'Theme and Notifications', smallFontSize, bodyFontSize),
                           const Divider(height: 1),
@@ -203,7 +193,6 @@ class ProfilePage extends StatelessWidget {
                         ]),
                         const SizedBox(height: 20),
 
-                        // Logout
                         _buildLogoutButton(bodyFontSize),
                         const SizedBox(height: 40),
                       ],
@@ -226,7 +215,14 @@ class ProfilePage extends StatelessWidget {
       decoration: BoxDecoration(
         color: Colors.white,
         borderRadius: BorderRadius.circular(15),
-        boxShadow: [BoxShadow(color: Colors.black.withOpacity(0.05), blurRadius: 10, offset: const Offset(0, 4))],
+        boxShadow: [
+          BoxShadow(
+            // FIXED: withOpacity -> withValues
+            color: Colors.black.withValues(alpha: 0.05), 
+            blurRadius: 10, 
+            offset: const Offset(0, 4)
+          )
+        ],
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -265,7 +261,10 @@ class ProfilePage extends StatelessWidget {
       decoration: BoxDecoration(
         color: Colors.white,
         borderRadius: BorderRadius.circular(15),
-        border: Border.all(color: const Color(0xFFB30000).withOpacity(0.2)),
+        border: Border.all(
+          // FIXED: withOpacity -> withValues
+          color: const Color(0xFFB30000).withValues(alpha: 0.2)
+        ),
       ),
       child: ListTile(
         leading: const Icon(Icons.logout, color: Color(0xFFB30000)),
@@ -278,7 +277,11 @@ class ProfilePage extends StatelessWidget {
   Widget _buildBadge(String text, double fontSize) {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
-      decoration: BoxDecoration(color: const Color(0xFFB30000).withOpacity(0.1), borderRadius: BorderRadius.circular(20)),
+      decoration: BoxDecoration(
+        // FIXED: withOpacity -> withValues
+        color: const Color(0xFFB30000).withValues(alpha: 0.1), 
+        borderRadius: BorderRadius.circular(20)
+      ),
       child: Text(text, style: TextStyle(fontSize: fontSize - 2, color: const Color(0xFFB30000), fontWeight: FontWeight.bold)),
     );
   }

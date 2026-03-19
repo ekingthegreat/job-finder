@@ -8,7 +8,6 @@ class MessagePage extends StatefulWidget {
 }
 
 class _MessagePageState extends State<MessagePage> {
-  // FIXED: Added final to satisfy lint
   final List<Map<String, dynamic>> _messages = [
     {
       'name': 'Tech Innovators Inc.',
@@ -83,7 +82,6 @@ class _MessagePageState extends State<MessagePage> {
         children: [
           Container(
             height: MediaQuery.of(context).padding.top + 90,
-            // FIXED: Added const to BoxDecoration and BoxShadow
             decoration: const BoxDecoration(
               gradient: LinearGradient(
                 colors: [Color(0xFFB30000), Color(0xFF8A0000)],
@@ -131,7 +129,8 @@ class _MessagePageState extends State<MessagePage> {
                 Container(
                   padding: const EdgeInsets.all(8),
                   decoration: BoxDecoration(
-                    color: Colors.white.withOpacity(0.2),
+                    // FIXED: withOpacity -> withValues
+                    color: Colors.white.withValues(alpha: 0.2),
                     shape: BoxShape.circle,
                   ),
                   child: const Icon(Icons.search, color: Colors.white, size: 20),
@@ -186,13 +185,15 @@ class _MessagePageState extends State<MessagePage> {
                           shape: BoxShape.circle,
                           border: Border.all(
                             color: message['isEmployer']
-                                ? const Color(0xFFB30000).withOpacity(0.3)
-                                : const Color(0xFF666666).withOpacity(0.3),
+                                // FIXED: withOpacity -> withValues
+                                ? const Color(0xFFB30000).withValues(alpha: 0.3)
+                                : const Color(0xFF666666).withValues(alpha: 0.3),
                             width: 2.5,
                           ),
                           boxShadow: [
                             BoxShadow(
-                              color: Colors.black.withOpacity(0.1),
+                              // FIXED: withOpacity -> withValues
+                              color: Colors.black.withValues(alpha: 0.1),
                               blurRadius: 8,
                               offset: const Offset(0, 3),
                             ),
@@ -315,8 +316,9 @@ class _MessagePageState extends State<MessagePage> {
                                 borderRadius: BorderRadius.circular(12),
                                 border: Border.all(
                                   color: message['isEmployer']
-                                      ? const Color(0xFFB30000).withOpacity(0.3)
-                                      : const Color(0xFF666666).withOpacity(0.3),
+                                      // FIXED: withOpacity -> withValues
+                                      ? const Color(0xFFB30000).withValues(alpha: 0.3)
+                                      : const Color(0xFF666666).withValues(alpha: 0.3),
                                   width: 1,
                                 ),
                               ),
@@ -448,7 +450,8 @@ class _ChatDetailPageState extends State<ChatDetailPage> {
                     Container(
                       margin: const EdgeInsets.only(right: 12),
                       decoration: BoxDecoration(
-                        color: Colors.white.withOpacity(0.2),
+                        // FIXED: withOpacity -> withValues
+                        color: Colors.white.withValues(alpha: 0.2),
                         shape: BoxShape.circle,
                       ),
                       child: IconButton(
@@ -464,7 +467,8 @@ class _ChatDetailPageState extends State<ChatDetailPage> {
                           decoration: BoxDecoration(
                             shape: BoxShape.circle,
                             border: Border.all(
-                              color: Colors.white.withOpacity(0.5),
+                              // FIXED: withOpacity -> withValues
+                              color: Colors.white.withValues(alpha: 0.5),
                               width: 2,
                             ),
                           ),
@@ -514,7 +518,8 @@ class _ChatDetailPageState extends State<ChatDetailPage> {
                 Container(
                   padding: const EdgeInsets.all(8),
                   decoration: BoxDecoration(
-                    color: Colors.white.withOpacity(0.2),
+                    // FIXED: withOpacity -> withValues
+                    color: Colors.white.withValues(alpha: 0.2),
                     shape: BoxShape.circle,
                   ),
                   child: const Icon(Icons.search, color: Colors.white, size: 20),
@@ -533,7 +538,8 @@ class _ChatDetailPageState extends State<ChatDetailPage> {
                   color: const Color(0xFFFFF5F5),
                   borderRadius: BorderRadius.circular(20),
                   border: Border.all(
-                    color: const Color(0xFFB30000).withOpacity(0.3),
+                    // FIXED: withOpacity -> withValues
+                    color: const Color(0xFFB30000).withValues(alpha: 0.3),
                     width: 1.5,
                   ),
                 ),
@@ -595,7 +601,6 @@ class _ChatDetailPageState extends State<ChatDetailPage> {
                   ),
                 ),
                 const SizedBox(width: 12),
-                // FIXED: Added const to BoxDecoration
                 Container(
                   decoration: const BoxDecoration(
                     color: Color(0xFFB30000),
@@ -643,7 +648,8 @@ class _ChatDetailPageState extends State<ChatDetailPage> {
               decoration: BoxDecoration(
                 shape: BoxShape.circle,
                 border: Border.all(
-                  color: const Color(0xFFB30000).withOpacity(0.3),
+                  // FIXED: withOpacity -> withValues
+                  color: const Color(0xFFB30000).withValues(alpha: 0.3),
                   width: 1.5,
                 ),
               ),
@@ -689,7 +695,8 @@ class _ChatDetailPageState extends State<ChatDetailPage> {
                     ),
                     boxShadow: [
                       BoxShadow(
-                        color: Colors.black.withOpacity(0.08),
+                        // FIXED: withOpacity -> withValues
+                        color: Colors.black.withValues(alpha: 0.08),
                         blurRadius: 6,
                         offset: const Offset(0, 3),
                       ),
