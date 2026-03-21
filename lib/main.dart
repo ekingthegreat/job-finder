@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 // 1. Updated import to point to the new auth folder
-import 'package:enricoso/auth/landingpage.dart'; 
-
+import 'package:enricoso/auth/login.dart'; 
+//import 'package:http/http.dart' as http; 
 void main() {
   runApp(const MyApp());
 }
@@ -35,7 +35,7 @@ class MyApp extends StatelessWidget {
         ),
       ),
       // 2. Changed home from JobListingPage to LoginPage
-      home: const LandingPage(), 
+      home: const LoginPage(), 
     );
   }
 }

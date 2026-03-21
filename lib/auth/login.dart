@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import 'package:enricoso/auth/register.dart'; 
+import 'package:enricoso/auth/registration.dart'; 
 import 'package:enricoso/features/job_seeker/job_seeker_shell/joblisting.dart'; 
 
 class LoginPage extends StatefulWidget {

@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
 import 'dart:convert';
 import 'package:image_picker/image_picker.dart';
-import 'dart:io';
+import 'dart:io'; 
 import 'package:enricoso/auth/login.dart';
 
 class RegistrationPage extends StatefulWidget {
@@ -77,77 +77,78 @@ class _RegistrationPageState extends State<RegistrationPage> {
   }
 
   // PSGC API Methods
- Future<void> _fetchRegions() async {
-  try {
-    final response = await http.get(Uri.parse('https://psgc.cloud/api/regions'));
-    if (response.statusCode == 200) {
-      final List<dynamic> data = json.decode(response.body);
+  Future<void> _fetchRegions() async {
+    try {
+      final response = await http.get(Uri.parse('https://psgc.cloud/api/regions'));
+      if (response.statusCode == 200) {
+        final List<dynamic> data = json.decode(response.body);
+        if (mounted) {
+          setState(() {
+            _regions = data;
+          });
+        }
+      }
+    } catch (e) {
       if (mounted) {
-        setState(() {
-          _regions = data;
-        });
+        _showErrorSnackBar('Error fetching regions: $e');
       }
     }
-  } catch (e) {
-    if (mounted) {
-      _showErrorSnackBar('Error fetching regions: $e');
-    }
   }
-}
 
-Future<void> _fetchProvinces(String regionCode) async {
-  try {
-    final response = await http.get(Uri.parse('https://psgc.cloud/api/regions/$regionCode/provinces'));
-    if (response.statusCode == 200) {
-      final List<dynamic> data = json.decode(response.body);
+  Future<void> _fetchProvinces(String regionCode) async {
+    try {
+      final response = await http.get(Uri.parse('https://psgc.cloud/api/regions/$regionCode/provinces'));
+      if (response.statusCode == 200) {
+        final List<dynamic> data = json.decode(response.body);
+        if (mounted) {
+          setState(() {
+            _provinces = data;
+          });
+        }
+      }
+    } catch (e) {
       if (mounted) {
-        setState(() {
-          _provinces = data;
-        });
+        _showErrorSnackBar('Error fetching provinces: $e');
       }
     }
-  } catch (e) {
-    if (mounted) {
-      _showErrorSnackBar('Error fetching provinces: $e');
-    }
   }
-}
 
-Future<void> _fetchCities(String provinceCode) async {
-  try {
-    final response = await http.get(Uri.parse('https://psgc.cloud/api/provinces/$provinceCode/cities-municipalities'));
-    if (response.statusCode == 200) {
-      final List<dynamic> data = json.decode(response.body);
+  Future<void> _fetchCities(String provinceCode) async {
+    try {
+      final response = await http.get(Uri.parse('https://psgc.cloud/api/provinces/$provinceCode/cities-municipalities'));
+      if (response.statusCode == 200) {
+        final List<dynamic> data = json.decode(response.body);
+        if (mounted) {
+          setState(() {
+            _cities = data;
+          });
+        }
+      }
+    } catch (e) {
       if (mounted) {
-        setState(() {
-          _cities = data;
-        });
+        _showErrorSnackBar('Error fetching cities: $e');
       }
     }
-  } catch (e) {
-    if (mounted) {
-      _showErrorSnackBar('Error fetching cities: $e');
-    }
   }
-}
 
-Future<void> _fetchBarangays(String cityCode) async {
-  try {
-    final response = await http.get(Uri.parse('https://psgc.cloud/api/cities-municipalities/$cityCode/barangays'));
-    if (response.statusCode == 200) {
-      final List<dynamic> data = json.decode(response.body);
+  Future<void> _fetchBarangays(String cityCode) async {
+    try {
+      final response = await http.get(Uri.parse('https://psgc.cloud/api/cities-municipalities/$cityCode/barangays'));
+      if (response.statusCode == 200) {
+        final List<dynamic> data = json.decode(response.body);
+        if (mounted) {
+          setState(() {
+            _barangays = data;
+          });
+        }
+      }
+    } catch (e) {
       if (mounted) {
-        setState(() {
-          _barangays = data;
-        });
+        _showErrorSnackBar('Error fetching barangays: $e');
       }
     }
-  } catch (e) {
-    if (mounted) {
-      _showErrorSnackBar('Error fetching barangays: $e');
-    }
   }
-}
+
   // Image picker methods
   Future<void> _pickImage(ImageSource source, String type) async {
     final XFile? image = await _picker.pickImage(source: source);
@@ -164,105 +165,102 @@ Future<void> _fetchBarangays(String cityCode) async {
     }
   }
 
- Future<void> _selectDate(BuildContext context) async {
-  final DateTime? picked = await showDatePicker(
-    context: context,
-    initialDate: DateTime(2005),
-    firstDate: DateTime(1950),
-    lastDate: DateTime.now(),
-    builder: (context, child) {
-      return Theme(
-        data: Theme.of(context).copyWith(
-          colorScheme: const ColorScheme.light(primary: Color(0xFFB30000)),
-        ),
-        child: child!,
-      );
-    },
-  );
-  
-  if (picked != null && mounted) {
-    setState(() {
-      _birthdayController.text = "${picked.year}-${picked.month.toString().padLeft(2, '0')}-${picked.day.toString().padLeft(2, '0')}";
-      final age = DateTime.now().year - picked.year;
-      _ageController.text = age.toString();
-    });
-  }
-}
-
- Future<void> _submitRegistration() async {
-  if (!_formKey1.currentState!.validate() || 
-      !_formKey2.currentState!.validate() || 
-      !_formKey3.currentState!.validate()) {
-    return;
-  }
-
-  if (_passController.text != _confirmPassController.text) {
-    _showErrorSnackBar('Passwords do not match');
-    return;
-  }
-
-  if (_frontIdImage == null || _backIdImage == null || _selfieImage == null) {
-    _showErrorSnackBar('Please complete the verification process');
-    return;
-  }
-
-  setState(() => _isLoading = true);
-
-  try {
-    var request = http.MultipartRequest(
-      'POST',
-      Uri.parse('http://localhost:8888/enricoso/get.php') // Update with your actual URL
+  Future<void> _selectDate(BuildContext context) async {
+    final DateTime? picked = await showDatePicker(
+      context: context,
+      initialDate: DateTime(2005),
+      firstDate: DateTime(1950),
+      lastDate: DateTime.now(),
+      builder: (context, child) {
+        return Theme(
+          data: Theme.of(context).copyWith(
+            colorScheme: const ColorScheme.light(primary: Color(0xFFB30000)),
+          ),
+          child: child!,
+        );
+      },
     );
-
-    // Add text fields
-    request.fields.addAll({
-      'fullname': _nameController.text,
-      'username': _usernameController.text,
-      'age': _ageController.text,
-      'birthday': _birthdayController.text,
-      'email': _emailController.text,
-      'password': _passController.text,
-      'address': _buildFullAddress(),
-      'job': _currentJobController.text,
-      'street_address': _streetAddressController.text,
-      'region': _selectedRegionName ?? '',
-      'province': _selectedProvinceName ?? '',
-      'city': _selectedCityName ?? '',
-      'barangay': _selectedBarangayName ?? '',
-    });
-
-    // Add files
-    request.files.add(await http.MultipartFile.fromPath('front_id', _frontIdImage!.path));
-    request.files.add(await http.MultipartFile.fromPath('back_id', _backIdImage!.path));
-    request.files.add(await http.MultipartFile.fromPath('selfie', _selfieImage!.path));
-
-    var response = await request.send();
-    var responseData = await response.stream.bytesToString();
-    var jsonResponse = json.decode(responseData);
-
-    // Check if widget is still mounted before using context
-    if (!mounted) return;
-
-    if (jsonResponse['status'] == 'success') {
-      _showSuccessSnackBar('Account created successfully!');
-      Navigator.pushReplacement(
-        context,
-        MaterialPageRoute(builder: (context) => const LoginPage()),
-      );
-    } else {
-      _showErrorSnackBar(jsonResponse['message']);
-    }
-  } catch (e) {
-    // Check if widget is still mounted before using context
-    if (!mounted) return;
-    _showErrorSnackBar('Error: $e');
-  } finally {
-    // Check if widget is still mounted before calling setState
-    if (mounted) {
-      setState(() => _isLoading = false);
+    
+    if (picked != null && mounted) {
+      setState(() {
+        _birthdayController.text = "${picked.year}-${picked.month.toString().padLeft(2, '0')}-${picked.day.toString().padLeft(2, '0')}";
+        final age = DateTime.now().year - picked.year;
+        _ageController.text = age.toString();
+      });
     }
   }
-}
+
+  Future<void> _submitRegistration() async {
+    if (!_formKey1.currentState!.validate() || 
+        !_formKey2.currentState!.validate() || 
+        !_formKey3.currentState!.validate()) {
+      return;
+    }
+
+    if (_passController.text != _confirmPassController.text) {
+      _showErrorSnackBar('Passwords do not match');
+      return;
+    }
+
+    if (_frontIdImage == null || _backIdImage == null || _selfieImage == null) {
+      _showErrorSnackBar('Please complete the verification process');
+      return;
+    }
+
+    setState(() => _isLoading = true);
+
+    try {
+      var request = http.MultipartRequest(
+        'POST',
+        Uri.parse('http://10.0.2.2:8888/enricoso/get.php') // Update with your actual URL
+      );
+
+      // Add text fields
+      request.fields.addAll({
+        'fullname': _nameController.text,
+        'username': _usernameController.text,
+        'age': _ageController.text,
+        'birthday': _birthdayController.text,
+        'email': _emailController.text,
+        'password': _passController.text,
+        'address': _buildFullAddress(),
+        'job': _currentJobController.text,
+        'street_address': _streetAddressController.text,
+        'region': _selectedRegionName ?? '',
+        'province': _selectedProvinceName ?? '',
+        'city': _selectedCityName ?? '',
+        'barangay': _selectedBarangayName ?? '',
+      });
+
+      // Add files
+      request.files.add(await http.MultipartFile.fromPath('front_id', _frontIdImage!.path));
+      request.files.add(await http.MultipartFile.fromPath('back_id', _backIdImage!.path));
+      request.files.add(await http.MultipartFile.fromPath('selfie', _selfieImage!.path));
+
+      var response = await request.send();
+      var responseData = await response.stream.bytesToString();
+      var jsonResponse = json.decode(responseData);
+
+      if (!mounted) return;
+
+      if (jsonResponse['status'] == 'success') {
+        _showSuccessSnackBar('Account created successfully!');
+        Navigator.pushReplacement(
+          context,
+          MaterialPageRoute(builder: (context) => const LoginPage()),
+        );
+      } else {
+        _showErrorSnackBar(jsonResponse['message']);
+      }
+    } catch (e) {
+      if (!mounted) return;
+      _showErrorSnackBar('Error: $e');
+    } finally {
+      if (mounted) {
+        setState(() => _isLoading = false);
+      }
+    }
+  }
 
   String _buildFullAddress() {
     List<String> parts = [];
@@ -707,143 +705,144 @@ Future<void> _fetchBarangays(String cityCode) async {
     );
   }
 
-Widget _buildRegionDropdown() {
-  return DropdownButtonFormField<String>(
-    initialValue: _selectedRegionCode,
-    hint: const Text("Select Region", style: TextStyle(fontSize: 13)),
-    decoration: _inputDecoration(Icons.location_on_outlined),
-    isExpanded: true,
-    items: _regions.map<DropdownMenuItem<String>>((region) {
-      return DropdownMenuItem<String>(
-        value: region['code'] as String?,
-        child: Text(region['name'] ?? '', style: const TextStyle(fontSize: 13)),
-      );
-    }).toList(),
-    onChanged: (value) async {
-      setState(() {
-        _selectedRegionCode = value;
+  Widget _buildRegionDropdown() {
+    return DropdownButtonFormField<String>(
+      initialValue: _selectedRegionCode,
+      hint: const Text("Select Region", style: TextStyle(fontSize: 13)),
+      decoration: _inputDecoration(Icons.location_on_outlined),
+      isExpanded: true,
+      items: _regions.map<DropdownMenuItem<String>>((region) {
+        return DropdownMenuItem<String>(
+          value: region['code'] as String?,
+          child: Text(region['name'] ?? '', style: const TextStyle(fontSize: 13)),
+        );
+      }).toList(),
+      onChanged: (value) async {
+        setState(() {
+          _selectedRegionCode = value;
+          if (value != null) {
+            final selectedRegion = _regions.firstWhere(
+              (r) => r['code'] == value,
+              orElse: () => null,
+            );
+            _selectedRegionName = selectedRegion?['name'];
+          }
+          _selectedProvinceCode = null;
+          _selectedProvinceName = null;
+          _selectedCityCode = null;
+          _selectedCityName = null;
+          _selectedBarangayCode = null;
+          _selectedBarangayName = null;
+          _provinces = [];
+          _cities = [];
+          _barangays = [];
+        });
         if (value != null) {
-          final selectedRegion = _regions.firstWhere(
-            (r) => r['code'] == value,
-            orElse: () => null,
-          );
-          _selectedRegionName = selectedRegion?['name'];
+          await _fetchProvinces(value);
         }
-        _selectedProvinceCode = null;
-        _selectedProvinceName = null;
-        _selectedCityCode = null;
-        _selectedCityName = null;
-        _selectedBarangayCode = null;
-        _selectedBarangayName = null;
-        _provinces = [];
-        _cities = [];
-        _barangays = [];
-      });
-      if (value != null) {
-        await _fetchProvinces(value);
-      }
-    },
-    validator: (value) => value == null ? 'Select a region' : null,
-  );
-}
+      },
+      validator: (value) => value == null ? 'Select a region' : null,
+    );
+  }
 
- Widget _buildProvinceDropdown() {
-  return DropdownButtonFormField<String>(
-    initialValue: _selectedProvinceCode,
-    hint: const Text("Select Province", style: TextStyle(fontSize: 13)),
-    decoration: _inputDecoration(null),
-    isExpanded: true,
-    items: _provinces.map<DropdownMenuItem<String>>((province) {
-      return DropdownMenuItem<String>(
-        value: province['code'] as String?,
-        child: Text(province['name'] ?? '', style: const TextStyle(fontSize: 13)),
-      );
-    }).toList(),
-    onChanged: (value) async {
-      setState(() {
-        _selectedProvinceCode = value;
+  Widget _buildProvinceDropdown() {
+    return DropdownButtonFormField<String>(
+      initialValue: _selectedProvinceCode,
+      hint: const Text("Select Province", style: TextStyle(fontSize: 13)),
+      decoration: _inputDecoration(null),
+      isExpanded: true,
+      items: _provinces.map<DropdownMenuItem<String>>((province) {
+        return DropdownMenuItem<String>(
+          value: province['code'] as String?,
+          child: Text(province['name'] ?? '', style: const TextStyle(fontSize: 13)),
+        );
+      }).toList(),
+      onChanged: (value) async {
+        setState(() {
+          _selectedProvinceCode = value;
+          if (value != null) {
+            final selectedProvince = _provinces.firstWhere(
+              (p) => p['code'] == value,
+              orElse: () => null,
+            );
+            _selectedProvinceName = selectedProvince?['name'];
+          }
+          _selectedCityCode = null;
+          _selectedCityName = null;
+          _selectedBarangayCode = null;
+          _selectedBarangayName = null;
+          _cities = [];
+          _barangays = [];
+        });
         if (value != null) {
-          final selectedProvince = _provinces.firstWhere(
-            (p) => p['code'] == value,
-            orElse: () => null,
-          );
-          _selectedProvinceName = selectedProvince?['name'];
+          await _fetchCities(value);
         }
-        _selectedCityCode = null;
-        _selectedCityName = null;
-        _selectedBarangayCode = null;
-        _selectedBarangayName = null;
-        _cities = [];
-        _barangays = [];
-      });
-      if (value != null) {
-        await _fetchCities(value);
-      }
-    },
-    validator: (value) => value == null ? 'Select a province' : null,
-  );
-}
-Widget _buildCityDropdown() {
-  return DropdownButtonFormField<String>(
-    initialValue: _selectedCityCode,
-    hint: const Text("Select City/Municipality", style: TextStyle(fontSize: 13)),
-    decoration: _inputDecoration(null),
-    isExpanded: true,
-    items: _cities.map<DropdownMenuItem<String>>((city) {
-      return DropdownMenuItem<String>(
-        value: city['code'] as String?,
-        child: Text(city['name'] ?? '', style: const TextStyle(fontSize: 13)),
-      );
-    }).toList(),
-    onChanged: (value) async {
-      setState(() {
-        _selectedCityCode = value;
-        if (value != null) {
-          final selectedCity = _cities.firstWhere(
-            (c) => c['code'] == value,
-            orElse: () => null,
-          );
-          _selectedCityName = selectedCity?['name'];
-        }
-        _selectedBarangayCode = null;
-        _selectedBarangayName = null;
-        _barangays = [];
-      });
-      if (value != null) {
-        await _fetchBarangays(value);
-      }
-    },
-    validator: (value) => value == null ? 'Select a city/municipality' : null,
-  );
-}
+      },
+      validator: (value) => value == null ? 'Select a province' : null,
+    );
+  }
 
- Widget _buildBarangayDropdown() {
-  return DropdownButtonFormField<String>(
-    initialValue: _selectedBarangayCode,
-    hint: const Text("Select Barangay", style: TextStyle(fontSize: 13)),
-    decoration: _inputDecoration(null),
-    isExpanded: true,
-    items: _barangays.map<DropdownMenuItem<String>>((barangay) {
-      return DropdownMenuItem<String>(
-        value: barangay['code'] as String?,
-        child: Text(barangay['name'] ?? '', style: const TextStyle(fontSize: 13)),
-      );
-    }).toList(),
-    onChanged: (value) {
-      setState(() {
-        _selectedBarangayCode = value;
+  Widget _buildCityDropdown() {
+    return DropdownButtonFormField<String>(
+      initialValue: _selectedCityCode,
+      hint: const Text("Select City/Municipality", style: TextStyle(fontSize: 13)),
+      decoration: _inputDecoration(null),
+      isExpanded: true,
+      items: _cities.map<DropdownMenuItem<String>>((city) {
+        return DropdownMenuItem<String>(
+          value: city['code'] as String?,
+          child: Text(city['name'] ?? '', style: const TextStyle(fontSize: 13)),
+        );
+      }).toList(),
+      onChanged: (value) async {
+        setState(() {
+          _selectedCityCode = value;
+          if (value != null) {
+            final selectedCity = _cities.firstWhere(
+              (c) => c['code'] == value,
+              orElse: () => null,
+            );
+            _selectedCityName = selectedCity?['name'];
+          }
+          _selectedBarangayCode = null;
+          _selectedBarangayName = null;
+          _barangays = [];
+        });
         if (value != null) {
-          final selectedBarangay = _barangays.firstWhere(
-            (b) => b['code'] == value,
-            orElse: () => null,
-          );
-          _selectedBarangayName = selectedBarangay?['name'];
+          await _fetchBarangays(value);
         }
-      });
-    },
-    validator: (value) => value == null ? 'Select a barangay' : null,
-  );
-}
+      },
+      validator: (value) => value == null ? 'Select a city/municipality' : null,
+    );
+  }
+
+  Widget _buildBarangayDropdown() {
+    return DropdownButtonFormField<String>(
+      initialValue: _selectedBarangayCode,
+      hint: const Text("Select Barangay", style: TextStyle(fontSize: 13)),
+      decoration: _inputDecoration(null),
+      isExpanded: true,
+      items: _barangays.map<DropdownMenuItem<String>>((barangay) {
+        return DropdownMenuItem<String>(
+          value: barangay['code'] as String?,
+          child: Text(barangay['name'] ?? '', style: const TextStyle(fontSize: 13)),
+        );
+      }).toList(),
+      onChanged: (value) {
+        setState(() {
+          _selectedBarangayCode = value;
+          if (value != null) {
+            final selectedBarangay = _barangays.firstWhere(
+              (b) => b['code'] == value,
+              orElse: () => null,
+            );
+            _selectedBarangayName = selectedBarangay?['name'];
+          }
+        });
+      },
+      validator: (value) => value == null ? 'Select a barangay' : null,
+    );
+  }
 
   Widget _buildCareerStep() {
     return Form(
@@ -994,8 +993,8 @@ Widget _buildCityDropdown() {
               padding: const EdgeInsets.all(8),
               decoration: BoxDecoration(
                 color: isCompleted 
-                    ? Colors.green.withValues(alpha: 0.1)
-                    : const Color(0xFFB30000).withValues(alpha: 0.1),
+                    ? Colors.green.withValues(alpha: .1)
+                    : const Color(0xFFB30000).withValues(alpha: .1),
                 borderRadius: BorderRadius.circular(8),
               ),
               child: Icon(
@@ -1062,7 +1061,7 @@ Widget _buildCityDropdown() {
       decoration: isPrimary ? BoxDecoration(
         borderRadius: BorderRadius.circular(14),
         boxShadow: [
-          BoxShadow(color: const Color(0xFFB30000).withValues(alpha: 0.3), blurRadius: 10, offset: const Offset(0, 4)),
+          BoxShadow(color: const Color(0xFFB30000).withValues(alpha: .3), blurRadius: 10, offset: const Offset(0, 4)),
         ],
       ) : null,
       child: isPrimary
