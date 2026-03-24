@@ -1,6 +1,9 @@
 import 'package:flutter/material.dart';
-import 'package:enricoso/auth/registration.dart'; 
-import 'package:enricoso/features/job_seeker/job_seeker_shell/joblisting.dart'; 
+import 'package:http/http.dart' as http;
+import 'dart:convert';
+import 'package:shared_preferences/shared_preferences.dart';
+import 'package:enricoso/auth/registration.dart';
+import 'package:enricoso/features/job_seeker/job_seeker_shell/joblisting.dart';
 
 class LoginPage extends StatefulWidget {
   const LoginPage({super.key});
@@ -11,28 +14,119 @@ class LoginPage extends StatefulWidget {
 
 class _LoginPageState extends State<LoginPage> {
   bool _isPasswordVisible = false;
-  final _emailController = TextEditingController();
-  final _passwordController = TextEditingController();
+  bool _isLoading = false;
+  final TextEditingController _emailController = TextEditingController();
+  final TextEditingController _passwordController = TextEditingController();
 
-  void _handleSignIn() {
-    final email = _emailController.text.trim();
-    final password = _passwordController.text.trim();
+  // Base URL - Change this based on your environment
+  // For Android Emulator: http://10.0.2.2:8888
+  // For iOS Simulator: http://localhost:8888
+  // For Physical Device: http://[your-ip]:8888
+  final String baseUrl = 'http://127.0.0.1:8888';
+
+  @override
+  void initState() {
+    super.initState();
+    _checkLoginStatus();
+  }
+
+  Future<void> _checkLoginStatus() async {
+    final prefs = await SharedPreferences.getInstance();
+    bool isLoggedIn = prefs.getBool('is_logged_in') ?? false;
+
+    if (isLoggedIn && mounted) {
+      Navigator.pushReplacement(
+        context,
+        MaterialPageRoute(builder: (context) => const JobListingPage()),
+      );
+    }
+  }
+
+  Future<void> _handleSignIn() async {
+    final String email = _emailController.text.trim();
+    final String password = _passwordController.text.trim();
 
     if (email.isEmpty || password.isEmpty) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: const Text("Please fill in all fields"),
-          behavior: SnackBarBehavior.floating,
-          backgroundColor: const Color(0xFFB30000),
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
-        ),
-      );
+      _showSnackBar("Please fill in all fields", isError: true);
       return;
     }
 
-    Navigator.pushReplacement(
-      context,
-      MaterialPageRoute(builder: (context) => const JobListingPage()),
+    if (!RegExp(r'^[\w-\.]+@([\w-]+\.)+[\w-]{2,4}$').hasMatch(email)) {
+      _showSnackBar("Please enter a valid email address", isError: true);
+      return;
+    }
+
+    setState(() {
+      _isLoading = true;
+    });
+
+    try {
+      final response = await http.post(
+        Uri.parse('$baseUrl/enricoso/login.php'),
+        headers: {'Content-Type': 'application/json'},
+        body: json.encode({
+          'email': email,
+          'password': password,
+        }),
+      ).timeout(const Duration(seconds: 30));
+
+      // Check if widget is still mounted before using context
+      if (!mounted) return;
+
+      final Map<String, dynamic> responseData = json.decode(response.body);
+
+      if (response.statusCode == 200 && responseData['status'] == 'success') {
+        await _saveUserSession(responseData['user']);
+        
+        // Check mounted again after async operation
+        if (!mounted) return;
+        
+        _showSnackBar("Welcome back, ${responseData['user']['fullname']}!", isError: false);
+
+        Navigator.pushReplacement(
+          context,
+          MaterialPageRoute(builder: (context) => const JobListingPage()),
+        );
+      } else {
+        // Check mounted before showing snackbar
+        if (!mounted) return;
+        _showSnackBar(responseData['message'] ?? 'Invalid email or password', isError: true);
+      }
+    } catch (e) {
+      // Check mounted before showing snackbar
+      if (!mounted) return;
+      _showSnackBar('Connection error. Please check your internet connection.', isError: true);
+      debugPrint('Login error: $e');
+    } finally {
+      if (mounted) {
+        setState(() {
+          _isLoading = false;
+        });
+      }
+    }
+  }
+
+  Future<void> _saveUserSession(Map<String, dynamic> user) async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setInt('user_id', user['id']);
+    await prefs.setString('user_fullname', user['fullname']);
+    await prefs.setString('user_email', user['email']);
+    await prefs.setString('user_username', user['username']);
+    await prefs.setBool('is_logged_in', true);
+  }
+
+  void _showSnackBar(String message, {required bool isError}) {
+    // Check if mounted before showing snackbar
+    if (!mounted) return;
+    
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text(message),
+        behavior: SnackBarBehavior.floating,
+        backgroundColor: isError ? const Color(0xFFB30000) : Colors.green,
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+        duration: const Duration(seconds: 3),
+      ),
     );
   }
 
@@ -47,125 +141,144 @@ class _LoginPageState extends State<LoginPage> {
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: Colors.white,
-      body: SingleChildScrollView(
-        child: Column(
-          children: [
-            _buildHeader(),
-            Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 30.0, vertical: 40.0),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  const Text(
-                    "Welcome Back",
-                    style: TextStyle(
-                      fontSize: 32, 
-                      fontWeight: FontWeight.w800,
-                      letterSpacing: -0.5,
-                      color: Color(0xFF1A1A1A),
-                    ),
-                  ),
-                  const SizedBox(height: 10),
-                  Text(
-                    "Sign in to discover your next career opportunity.",
-                    style: TextStyle(
-                      color: Colors.grey[600], 
-                      fontSize: 15,
-                      height: 1.5,
-                    ),
-                  ),
-                  const SizedBox(height: 40),
-
-                  _buildInputField(
-                    label: "Email Address",
-                    icon: Icons.email_outlined,
-                    controller: _emailController,
-                    hint: "john@example.com",
-                  ),
-                  const SizedBox(height: 25),
-
-                  _buildInputField(
-                    label: "Password",
-                    icon: Icons.lock_outline_rounded,
-                    controller: _passwordController,
-                    isPassword: true,
-                    hint: "••••••••",
-                  ),
-
-                  Align(
-                    alignment: Alignment.centerRight,
-                    child: TextButton(
-                      onPressed: () {},
-                      style: TextButton.styleFrom(foregroundColor: const Color(0xFFB30000)),
-                      child: const Text(
-                        "Forgot Password?", 
-                        style: TextStyle(fontWeight: FontWeight.w700, fontSize: 13),
-                      ),
-                    ),
-                  ),
-                  const SizedBox(height: 35),
-
-                  // Login Button
-                  Container(
-                    width: double.infinity,
-                    height: 58,
-                    decoration: BoxDecoration(
-                      borderRadius: BorderRadius.circular(16),
-                      boxShadow: [
-                        BoxShadow(
-                          color: const Color(0xFFB30000).withValues(alpha: 0.08),
-                          blurRadius: 12,
-                          offset: const Offset(0, 6),
-                        ),
-                      ],
-                    ),
-                    child: ElevatedButton(
-                      onPressed: _handleSignIn,
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: const Color(0xFFB30000),
-                        foregroundColor: Colors.white,
-                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-                        elevation: 0,
-                      ),
-                      child: const Text(
-                        "Sign In",
-                        style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
-                      ),
-                    ),
-                  ),
-                  const SizedBox(height: 40),
-
-                  // Register Link
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.center,
+      body: Stack(
+        children: [
+          SingleChildScrollView(
+            child: Column(
+              children: [
+                _buildHeader(),
+                Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 30.0, vertical: 40.0),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      Text(
-                        "New to Job Finder? ",
-                        style: TextStyle(color: Colors.grey[700], fontSize: 14),
+                      const Text(
+                        "Welcome Back",
+                        style: TextStyle(
+                          fontSize: 32,
+                          fontWeight: FontWeight.w800,
+                          letterSpacing: -0.5,
+                          color: Color(0xFF1A1A1A),
+                        ),
                       ),
-                      GestureDetector(
-                        onTap: () {
-                          Navigator.push(
-                            context,
-                            MaterialPageRoute(builder: (context) => const RegistrationPage()),
-                          );
-                        },
-                        child: const Text(
-                          "Sign Up",
-                          style: TextStyle(
-                            color: Color(0xFFB30000), 
-                            fontWeight: FontWeight.w800,
-                            fontSize: 14,
+                      const SizedBox(height: 10),
+                      Text(
+                        "Sign in to discover your next career opportunity.",
+                        style: TextStyle(
+                          color: Colors.grey[600],
+                          fontSize: 15,
+                          height: 1.5,
+                        ),
+                      ),
+                      const SizedBox(height: 40),
+
+                      _buildInputField(
+                        label: "Email Address",
+                        icon: Icons.email_outlined,
+                        controller: _emailController,
+                        hint: "john@example.com",
+                      ),
+                      const SizedBox(height: 25),
+
+                      _buildInputField(
+                        label: "Password",
+                        icon: Icons.lock_outline_rounded,
+                        controller: _passwordController,
+                        isPassword: true,
+                        hint: "••••••••",
+                      ),
+
+                      Align(
+                        alignment: Alignment.centerRight,
+                        child: TextButton(
+                          onPressed: () {
+                            _showSnackBar("Forgot password feature coming soon!", isError: false);
+                          },
+                          style: TextButton.styleFrom(
+                            foregroundColor: const Color(0xFFB30000),
+                          ),
+                          child: const Text(
+                            "Forgot Password?",
+                            style: TextStyle(fontWeight: FontWeight.w700, fontSize: 13),
                           ),
                         ),
                       ),
+                      const SizedBox(height: 35),
+
+                      Container(
+                        width: double.infinity,
+                        height: 58,
+                        decoration: BoxDecoration(
+                          borderRadius: BorderRadius.circular(16),
+                          boxShadow: [
+                            BoxShadow(
+                              color: const Color(0xFFB30000).withValues(alpha: 0.08),
+                              blurRadius: 12,
+                              offset: const Offset(0, 6),
+                            ),
+                          ],
+                        ),
+                        child: ElevatedButton(
+                          onPressed: _isLoading ? null : _handleSignIn,
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: const Color(0xFFB30000),
+                            foregroundColor: Colors.white,
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(16),
+                            ),
+                            elevation: 0,
+                          ),
+                          child: _isLoading
+                              ? const SizedBox(
+                                  height: 24,
+                                  width: 24,
+                                  child: CircularProgressIndicator(
+                                    color: Colors.white,
+                                    strokeWidth: 2.5,
+                                  ),
+                                )
+                              : const Text(
+                                  "Sign In",
+                                  style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+                                ),
+                        ),
+                      ),
+                      const SizedBox(height: 40),
+
+                      Row(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          Text(
+                            "New to Job Finder? ",
+                            style: TextStyle(color: Colors.grey[700], fontSize: 14),
+                          ),
+                          GestureDetector(
+                            onTap: () {
+                              Navigator.push(
+                                context,
+                                MaterialPageRoute(
+                                  builder: (context) => const RegistrationPage(),
+                                ),
+                              );
+                            },
+                            child: const Text(
+                              "Sign Up",
+                              style: TextStyle(
+                                color: Color(0xFFB30000),
+                                fontWeight: FontWeight.w800,
+                                fontSize: 14,
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
                     ],
                   ),
-                ],
-              ),
+                ),
+              ],
             ),
-          ],
-        ),
+          ),
+        ],
       ),
     );
   }
@@ -176,8 +289,8 @@ class _LoginPageState extends State<LoginPage> {
       width: double.infinity,
       decoration: const BoxDecoration(
         gradient: LinearGradient(
-          colors: [Color(0xFFB30000), Color(0xFF8A0000)], 
-          begin: Alignment.topLeft, 
+          colors: [Color(0xFFB30000), Color(0xFF8A0000)],
+          begin: Alignment.topLeft,
           end: Alignment.bottomRight,
         ),
         borderRadius: BorderRadius.only(bottomLeft: Radius.circular(100)),
@@ -198,10 +311,19 @@ class _LoginPageState extends State<LoginPage> {
             const Text(
               "JOB FINDER",
               style: TextStyle(
-                color: Colors.white, 
-                fontSize: 26, 
-                fontWeight: FontWeight.w900, 
+                color: Colors.white,
+                fontSize: 26,
+                fontWeight: FontWeight.w900,
                 letterSpacing: 4,
+              ),
+            ),
+            const SizedBox(height: 8),
+            const Text(
+              "Find Your Dream Job Today",
+              style: TextStyle(
+                color: Colors.white70,
+                fontSize: 12,
+                fontWeight: FontWeight.w500,
               ),
             ),
           ],
@@ -211,20 +333,20 @@ class _LoginPageState extends State<LoginPage> {
   }
 
   Widget _buildInputField({
-    required String label, 
-    required IconData icon, 
-    required TextEditingController controller, 
-    required String hint, 
-    bool isPassword = false
+    required String label,
+    required IconData icon,
+    required TextEditingController controller,
+    required String hint,
+    bool isPassword = false,
   }) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Text(
-          label, 
+          label,
           style: const TextStyle(
-            fontWeight: FontWeight.w700, 
-            fontSize: 13, 
+            fontWeight: FontWeight.w700,
+            fontSize: 13,
             color: Color(0xFF444444),
             letterSpacing: 0.2,
           ),
@@ -234,12 +356,21 @@ class _LoginPageState extends State<LoginPage> {
           controller: controller,
           obscureText: isPassword && !_isPasswordVisible,
           style: const TextStyle(fontSize: 15, fontWeight: FontWeight.w500),
+          keyboardType: isPassword ? TextInputType.visiblePassword : TextInputType.emailAddress,
+          textInputAction: isPassword ? TextInputAction.done : TextInputAction.next,
+          onSubmitted: (value) {
+            if (isPassword) {
+              _handleSignIn();
+            }
+          },
           decoration: InputDecoration(
             prefixIcon: Icon(icon, color: const Color(0xFFB30000), size: 22),
             suffixIcon: isPassword
                 ? IconButton(
                     icon: Icon(
-                      _isPasswordVisible ? Icons.visibility_off_rounded : Icons.visibility_rounded, 
+                      _isPasswordVisible
+                          ? Icons.visibility_off_rounded
+                          : Icons.visibility_rounded,
                       color: Colors.grey[400],
                       size: 20,
                     ),

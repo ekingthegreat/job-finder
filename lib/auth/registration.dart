@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
 import 'dart:convert';
 import 'package:image_picker/image_picker.dart';
-import 'dart:io'; 
+import 'dart:io';
 import 'package:enricoso/auth/login.dart';
 
 class RegistrationPage extends StatefulWidget {
@@ -16,7 +16,7 @@ class _RegistrationPageState extends State<RegistrationPage> {
   int _currentStep = 0;
   bool _isPasswordVisible = false;
   bool _isLoading = false;
-  
+
   // Form Controllers
   final _nameController = TextEditingController();
   final _usernameController = TextEditingController();
@@ -27,7 +27,7 @@ class _RegistrationPageState extends State<RegistrationPage> {
   final _confirmPassController = TextEditingController();
   final _currentJobController = TextEditingController();
   final _streetAddressController = TextEditingController();
-  
+
   // Form Keys for validation
   final _formKey1 = GlobalKey<FormState>();
   final _formKey2 = GlobalKey<FormState>();
@@ -38,12 +38,12 @@ class _RegistrationPageState extends State<RegistrationPage> {
   List<dynamic> _provinces = [];
   List<dynamic> _cities = [];
   List<dynamic> _barangays = [];
-  
+
   String? _selectedRegionCode;
   String? _selectedProvinceCode;
   String? _selectedCityCode;
   String? _selectedBarangayCode;
-  
+
   String? _selectedRegionName;
   String? _selectedProvinceName;
   String? _selectedCityName;
@@ -53,7 +53,7 @@ class _RegistrationPageState extends State<RegistrationPage> {
   File? _frontIdImage;
   File? _backIdImage;
   File? _selfieImage;
-  
+
   final ImagePicker _picker = ImagePicker();
 
   @override
@@ -79,7 +79,8 @@ class _RegistrationPageState extends State<RegistrationPage> {
   // PSGC API Methods
   Future<void> _fetchRegions() async {
     try {
-      final response = await http.get(Uri.parse('https://psgc.cloud/api/regions'));
+      final response =
+          await http.get(Uri.parse('https://psgc.cloud/api/regions'));
       if (response.statusCode == 200) {
         final List<dynamic> data = json.decode(response.body);
         if (mounted) {
@@ -97,7 +98,8 @@ class _RegistrationPageState extends State<RegistrationPage> {
 
   Future<void> _fetchProvinces(String regionCode) async {
     try {
-      final response = await http.get(Uri.parse('https://psgc.cloud/api/regions/$regionCode/provinces'));
+      final response = await http.get(
+          Uri.parse('https://psgc.cloud/api/regions/$regionCode/provinces'));
       if (response.statusCode == 200) {
         final List<dynamic> data = json.decode(response.body);
         if (mounted) {
@@ -115,7 +117,8 @@ class _RegistrationPageState extends State<RegistrationPage> {
 
   Future<void> _fetchCities(String provinceCode) async {
     try {
-      final response = await http.get(Uri.parse('https://psgc.cloud/api/provinces/$provinceCode/cities-municipalities'));
+      final response = await http.get(Uri.parse(
+          'https://psgc.cloud/api/provinces/$provinceCode/cities-municipalities'));
       if (response.statusCode == 200) {
         final List<dynamic> data = json.decode(response.body);
         if (mounted) {
@@ -133,7 +136,8 @@ class _RegistrationPageState extends State<RegistrationPage> {
 
   Future<void> _fetchBarangays(String cityCode) async {
     try {
-      final response = await http.get(Uri.parse('https://psgc.cloud/api/cities-municipalities/$cityCode/barangays'));
+      final response = await http.get(Uri.parse(
+          'https://psgc.cloud/api/cities-municipalities/$cityCode/barangays'));
       if (response.statusCode == 200) {
         final List<dynamic> data = json.decode(response.body);
         if (mounted) {
@@ -180,10 +184,11 @@ class _RegistrationPageState extends State<RegistrationPage> {
         );
       },
     );
-    
+
     if (picked != null && mounted) {
       setState(() {
-        _birthdayController.text = "${picked.year}-${picked.month.toString().padLeft(2, '0')}-${picked.day.toString().padLeft(2, '0')}";
+        _birthdayController.text =
+            "${picked.year}-${picked.month.toString().padLeft(2, '0')}-${picked.day.toString().padLeft(2, '0')}";
         final age = DateTime.now().year - picked.year;
         _ageController.text = age.toString();
       });
@@ -191,8 +196,8 @@ class _RegistrationPageState extends State<RegistrationPage> {
   }
 
   Future<void> _submitRegistration() async {
-    if (!_formKey1.currentState!.validate() || 
-        !_formKey2.currentState!.validate() || 
+    if (!_formKey1.currentState!.validate() ||
+        !_formKey2.currentState!.validate() ||
         !_formKey3.currentState!.validate()) {
       return;
     }
@@ -202,18 +207,18 @@ class _RegistrationPageState extends State<RegistrationPage> {
       return;
     }
 
-    if (_frontIdImage == null || _backIdImage == null || _selfieImage == null) {
-      _showErrorSnackBar('Please complete the verification process');
-      return;
-    }
-
     setState(() => _isLoading = true);
 
     try {
+      // Use the correct URL based on your setup
+      // For Android Emulator: http://10.0.2.2:8888/enricoso/registration.php
+      // For iOS Simulator: http://localhost:8888/enricoso/registration.php
+      // For Physical Device: http://[your-ip]:8888/enricoso/registration.php
+
       var request = http.MultipartRequest(
-        'POST',
-        Uri.parse('http://10.0.2.2:8888/enricoso/get.php') // Update with your actual URL
-      );
+          'POST',
+          Uri.parse(
+              'http://localhost:8888/enricoso/registration.php')); // Use this for Android emulator
 
       // Add text fields
       request.fields.addAll({
@@ -232,29 +237,58 @@ class _RegistrationPageState extends State<RegistrationPage> {
         'barangay': _selectedBarangayName ?? '',
       });
 
-      // Add files
-      request.files.add(await http.MultipartFile.fromPath('front_id', _frontIdImage!.path));
-      request.files.add(await http.MultipartFile.fromPath('back_id', _backIdImage!.path));
-      request.files.add(await http.MultipartFile.fromPath('selfie', _selfieImage!.path));
+      // Add files only if they exist (optional)
+      if (_frontIdImage != null) {
+        request.files.add(
+            await http.MultipartFile.fromPath('front_id', _frontIdImage!.path));
+      }
+      if (_backIdImage != null) {
+        request.files.add(
+            await http.MultipartFile.fromPath('back_id', _backIdImage!.path));
+      }
+      if (_selfieImage != null) {
+        request.files.add(
+            await http.MultipartFile.fromPath('selfie', _selfieImage!.path));
+      }
 
       var response = await request.send();
       var responseData = await response.stream.bytesToString();
-      var jsonResponse = json.decode(responseData);
+
+      // Debug: Print the raw response
+      print('Raw response: $responseData');
+
+      // Check if response is empty
+      if (responseData.isEmpty) {
+        _showErrorSnackBar('Server returned empty response');
+        return;
+      }
+
+      // Try to parse JSON
+      Map<String, dynamic> jsonResponse;
+      try {
+        jsonResponse = json.decode(responseData);
+      } catch (e) {
+        print('JSON parsing error: $e');
+        print('Response was: $responseData');
+        _showErrorSnackBar('Server error: Invalid response format');
+        return;
+      }
 
       if (!mounted) return;
 
       if (jsonResponse['status'] == 'success') {
-        _showSuccessSnackBar('Account created successfully!');
+        _showSuccessSnackBar(jsonResponse['message']);
         Navigator.pushReplacement(
           context,
           MaterialPageRoute(builder: (context) => const LoginPage()),
         );
       } else {
-        _showErrorSnackBar(jsonResponse['message']);
+        _showErrorSnackBar(jsonResponse['message'] ?? 'Registration failed');
       }
     } catch (e) {
       if (!mounted) return;
-      _showErrorSnackBar('Error: $e');
+      print('Registration error: $e');
+      _showErrorSnackBar('Connection error: $e');
     } finally {
       if (mounted) {
         setState(() => _isLoading = false);
@@ -298,7 +332,8 @@ class _RegistrationPageState extends State<RegistrationPage> {
       context: context,
       builder: (BuildContext context) {
         return Dialog(
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+          shape:
+              RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
           child: Container(
             padding: const EdgeInsets.all(20),
             child: Column(
@@ -333,10 +368,13 @@ class _RegistrationPageState extends State<RegistrationPage> {
                         },
                         style: OutlinedButton.styleFrom(
                           side: const BorderSide(color: Color(0xFFB30000)),
-                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                          shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(12)),
                           padding: const EdgeInsets.symmetric(vertical: 12),
                         ),
-                        child: const Text("Next: Selfie", style: TextStyle(color: Color(0xFFB30000), fontSize: 13)),
+                        child: const Text("Next: Selfie",
+                            style: TextStyle(
+                                color: Color(0xFFB30000), fontSize: 13)),
                       ),
                     ),
                   ],
@@ -349,7 +387,8 @@ class _RegistrationPageState extends State<RegistrationPage> {
     );
   }
 
-  Widget _buildIdUploadBox(String title, File? image, VoidCallback onCameraTap, VoidCallback onGalleryTap) {
+  Widget _buildIdUploadBox(String title, File? image, VoidCallback onCameraTap,
+      VoidCallback onGalleryTap) {
     return Container(
       decoration: BoxDecoration(
         color: Colors.grey[100],
@@ -360,7 +399,8 @@ class _RegistrationPageState extends State<RegistrationPage> {
         children: [
           if (image != null)
             ClipRRect(
-              borderRadius: const BorderRadius.vertical(top: Radius.circular(12)),
+              borderRadius:
+                  const BorderRadius.vertical(top: Radius.circular(12)),
               child: Image.file(
                 image,
                 height: 100,
@@ -375,7 +415,8 @@ class _RegistrationPageState extends State<RegistrationPage> {
               child: Column(
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
-                  Icon(Icons.credit_card_outlined, size: 30, color: Colors.grey[400]),
+                  Icon(Icons.credit_card_outlined,
+                      size: 30, color: Colors.grey[400]),
                   const SizedBox(height: 4),
                   Text(
                     title,
@@ -393,16 +434,22 @@ class _RegistrationPageState extends State<RegistrationPage> {
                 Expanded(
                   child: TextButton.icon(
                     onPressed: onCameraTap,
-                    icon: Icon(Icons.camera_alt, size: 16, color: Colors.grey[600]),
-                    label: Text('Camera', style: TextStyle(color: Colors.grey[600], fontSize: 11)),
+                    icon: Icon(Icons.camera_alt,
+                        size: 16, color: Colors.grey[600]),
+                    label: Text('Camera',
+                        style:
+                            TextStyle(color: Colors.grey[600], fontSize: 11)),
                   ),
                 ),
                 Container(width: 1, height: 30, color: Colors.grey[300]),
                 Expanded(
                   child: TextButton.icon(
                     onPressed: onGalleryTap,
-                    icon: Icon(Icons.photo_library, size: 16, color: Colors.grey[600]),
-                    label: Text('Gallery', style: TextStyle(color: Colors.grey[600], fontSize: 11)),
+                    icon: Icon(Icons.photo_library,
+                        size: 16, color: Colors.grey[600]),
+                    label: Text('Gallery',
+                        style:
+                            TextStyle(color: Colors.grey[600], fontSize: 11)),
                   ),
                 ),
               ],
@@ -418,7 +465,8 @@ class _RegistrationPageState extends State<RegistrationPage> {
       context: context,
       builder: (BuildContext context) {
         return Dialog(
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+          shape:
+              RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
           child: Container(
             padding: const EdgeInsets.all(20),
             child: Column(
@@ -454,11 +502,13 @@ class _RegistrationPageState extends State<RegistrationPage> {
                         ? Column(
                             mainAxisAlignment: MainAxisAlignment.center,
                             children: [
-                              Icon(Icons.camera_alt_outlined, size: 50, color: Colors.grey[400]),
+                              Icon(Icons.camera_alt_outlined,
+                                  size: 50, color: Colors.grey[400]),
                               const SizedBox(height: 8),
                               Text(
                                 "Tap to take a selfie",
-                                style: TextStyle(color: Colors.grey[600], fontSize: 12),
+                                style: TextStyle(
+                                    color: Colors.grey[600], fontSize: 12),
                               ),
                             ],
                           )
@@ -473,10 +523,12 @@ class _RegistrationPageState extends State<RegistrationPage> {
                         onPressed: () => Navigator.pop(context),
                         style: OutlinedButton.styleFrom(
                           side: const BorderSide(color: Colors.grey),
-                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                          shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(12)),
                           padding: const EdgeInsets.symmetric(vertical: 12),
                         ),
-                        child: const Text("Back", style: TextStyle(color: Colors.grey, fontSize: 13)),
+                        child: const Text("Back",
+                            style: TextStyle(color: Colors.grey, fontSize: 13)),
                       ),
                     ),
                     const SizedBox(width: 10),
@@ -485,7 +537,8 @@ class _RegistrationPageState extends State<RegistrationPage> {
                         onPressed: () {
                           Navigator.pop(context);
                           if (_selfieImage != null) {
-                            _showSuccessSnackBar('Selfie uploaded successfully!');
+                            _showSuccessSnackBar(
+                                'Selfie uploaded successfully!');
                           } else {
                             _showErrorSnackBar('Please take a selfie first');
                           }
@@ -493,10 +546,12 @@ class _RegistrationPageState extends State<RegistrationPage> {
                         style: ElevatedButton.styleFrom(
                           backgroundColor: const Color(0xFFB30000),
                           foregroundColor: Colors.white,
-                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                          shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(12)),
                           padding: const EdgeInsets.symmetric(vertical: 12),
                         ),
-                        child: const Text("Save", style: TextStyle(fontSize: 13)),
+                        child:
+                            const Text("Save", style: TextStyle(fontSize: 13)),
                       ),
                     ),
                   ],
@@ -515,7 +570,8 @@ class _RegistrationPageState extends State<RegistrationPage> {
       backgroundColor: Colors.white,
       body: SafeArea(
         child: _isLoading
-            ? const Center(child: CircularProgressIndicator(color: Color(0xFFB30000)))
+            ? const Center(
+                child: CircularProgressIndicator(color: Color(0xFFB30000)))
             : Column(
                 children: [
                   _buildHeader(),
@@ -524,7 +580,8 @@ class _RegistrationPageState extends State<RegistrationPage> {
                       margin: const EdgeInsets.only(top: 10),
                       child: Theme(
                         data: Theme.of(context).copyWith(
-                          colorScheme: const ColorScheme.light(primary: Color(0xFFB30000)),
+                          colorScheme: const ColorScheme.light(
+                              primary: Color(0xFFB30000)),
                         ),
                         child: Stepper(
                           elevation: 0,
@@ -533,10 +590,11 @@ class _RegistrationPageState extends State<RegistrationPage> {
                           physics: const ClampingScrollPhysics(),
                           controlsBuilder: (context, details) {
                             return Padding(
-                              padding: const EdgeInsets.only(top: 20, bottom: 10),
+                              padding:
+                                  const EdgeInsets.only(top: 20, bottom: 10),
                               child: Row(
-                                mainAxisAlignment: _currentStep == 0 
-                                    ? MainAxisAlignment.center 
+                                mainAxisAlignment: _currentStep == 0
+                                    ? MainAxisAlignment.center
                                     : MainAxisAlignment.end,
                                 children: [
                                   if (_currentStep > 0) ...[
@@ -548,7 +606,9 @@ class _RegistrationPageState extends State<RegistrationPage> {
                                     const SizedBox(width: 12),
                                   ],
                                   _buildActionButton(
-                                    _currentStep == 2 ? "CREATE ACCOUNT" : "NEXT STEP",
+                                    _currentStep == 2
+                                        ? "CREATE ACCOUNT"
+                                        : "NEXT STEP",
                                     details.onStepContinue!,
                                     isPrimary: true,
                                   ),
@@ -558,23 +618,20 @@ class _RegistrationPageState extends State<RegistrationPage> {
                           },
                           onStepContinue: () {
                             bool isValid = true;
-                            
+
                             if (_currentStep == 0) {
                               isValid = _formKey1.currentState!.validate();
                               if (isValid && _selectedBarangayName == null) {
-                                _showErrorSnackBar('Please complete your address');
+                                _showErrorSnackBar(
+                                    'Please complete your address');
                                 isValid = false;
                               }
                             } else if (_currentStep == 1) {
                               isValid = _formKey2.currentState!.validate();
                             } else if (_currentStep == 2) {
                               isValid = _formKey3.currentState!.validate();
-                              if (isValid && (_frontIdImage == null || _backIdImage == null || _selfieImage == null)) {
-                                _showErrorSnackBar('Please complete the verification process');
-                                isValid = false;
-                              }
                             }
-                            
+
                             if (isValid) {
                               if (_currentStep < 2) {
                                 setState(() => _currentStep += 1);
@@ -584,25 +641,36 @@ class _RegistrationPageState extends State<RegistrationPage> {
                             }
                           },
                           onStepCancel: () {
-                            if (_currentStep > 0) setState(() => _currentStep -= 1);
+                            if (_currentStep > 0) {
+                              setState(() => _currentStep -= 1);
+                            }
                           },
                           steps: [
                             Step(
                               isActive: _currentStep >= 0,
-                              state: _currentStep > 0 ? StepState.complete : StepState.indexed,
-                              title: const Text("Personal", style: TextStyle(fontSize: 11)),
+                              state: _currentStep > 0
+                                  ? StepState.complete
+                                  : StepState.indexed,
+                              title: const Text("Personal",
+                                  style: TextStyle(fontSize: 11)),
                               content: _buildPersonalStep(),
                             ),
                             Step(
                               isActive: _currentStep >= 1,
-                              state: _currentStep > 1 ? StepState.complete : StepState.indexed,
-                              title: const Text("Career", style: TextStyle(fontSize: 11)),
+                              state: _currentStep > 1
+                                  ? StepState.complete
+                                  : StepState.indexed,
+                              title: const Text("Career",
+                                  style: TextStyle(fontSize: 11)),
                               content: _buildCareerStep(),
                             ),
                             Step(
                               isActive: _currentStep >= 2,
-                              state: _currentStep == 2 ? StepState.editing : StepState.indexed,
-                              title: const Text("Verify", style: TextStyle(fontSize: 11)),
+                              state: _currentStep == 2
+                                  ? StepState.editing
+                                  : StepState.indexed,
+                              title: const Text("Verify",
+                                  style: TextStyle(fontSize: 11)),
                               content: _buildVerificationStep(),
                             ),
                           ],
@@ -624,27 +692,44 @@ class _RegistrationPageState extends State<RegistrationPage> {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            _buildInputField("Full Name", Icons.person_outline, _nameController, "e.g. Michael Martinez", validator: (value) {
-              if (value == null || value.isEmpty) return 'Please enter your full name';
+            _buildInputField("Full Name", Icons.person_outline, _nameController,
+                "e.g. Michael Martinez", validator: (value) {
+              if (value == null || value.isEmpty) {
+                return 'Please enter your full name';
+              }
               return null;
             }),
             const SizedBox(height: 16),
-            _buildInputField("Username", Icons.alternate_email_rounded, _usernameController, "e.g. mike_dev", validator: (value) {
-              if (value == null || value.isEmpty) return 'Please enter a username';
-              if (value.length < 3) return 'Username must be at least 3 characters';
+            _buildInputField("Username", Icons.alternate_email_rounded,
+                _usernameController, "e.g. mike_dev", validator: (value) {
+              if (value == null || value.isEmpty) {
+                return 'Please enter a username';
+              }
+              if (value.length < 3) {
+                return 'Username must be at least 3 characters';
+              }
               return null;
             }),
             const SizedBox(height: 16),
             Row(
               children: [
-                Expanded(child: _buildInputField("Age", Icons.cake_outlined, _ageController, "Age", enabled: false)),
+                Expanded(
+                    child: _buildInputField(
+                        "Age", Icons.cake_outlined, _ageController, "Age",
+                        enabled: false)),
                 const SizedBox(width: 12),
                 Expanded(
                   child: InkWell(
                     onTap: () => _selectDate(context),
                     child: AbsorbPointer(
-                      child: _buildInputField("Birthday", Icons.calendar_month_outlined, _birthdayController, "YYYY-MM-DD", validator: (value) {
-                        if (value == null || value.isEmpty) return 'Select birthday';
+                      child: _buildInputField(
+                          "Birthday",
+                          Icons.calendar_month_outlined,
+                          _birthdayController,
+                          "YYYY-MM-DD", validator: (value) {
+                        if (value == null || value.isEmpty) {
+                          return 'Select birthday';
+                        }
                         return null;
                       }),
                     ),
@@ -653,7 +738,11 @@ class _RegistrationPageState extends State<RegistrationPage> {
               ],
             ),
             const SizedBox(height: 20),
-            const Text("Address (Philippines)", style: TextStyle(fontWeight: FontWeight.w700, fontSize: 13, color: Color(0xFF444444))),
+            const Text("Address (Philippines)",
+                style: TextStyle(
+                    fontWeight: FontWeight.w700,
+                    fontSize: 13,
+                    color: Color(0xFF444444))),
             const SizedBox(height: 8),
             _buildStreetAddressField(),
             const SizedBox(height: 10),
@@ -665,28 +754,41 @@ class _RegistrationPageState extends State<RegistrationPage> {
             if (_cities.isNotEmpty) const SizedBox(height: 10),
             if (_barangays.isNotEmpty) _buildBarangayDropdown(),
             if (_barangays.isNotEmpty) const SizedBox(height: 16),
-            _buildInputField("Email Address", Icons.email_outlined, _emailController, "e.g. michael@example.com", 
-              validator: (value) {
-                if (value == null || value.isEmpty) return 'Please enter your email';
-                if (!RegExp(r'^[\w-\.]+@([\w-]+\.)+[\w-]{2,4}$').hasMatch(value)) return 'Enter a valid email';
-                return null;
+            _buildInputField(
+                "Email Address",
+                Icons.email_outlined,
+                _emailController,
+                "e.g. michael@example.com", validator: (value) {
+              if (value == null || value.isEmpty) {
+                return 'Please enter your email';
               }
-            ),
+              if (!RegExp(r'^[\w-\.]+@([\w-]+\.)+[\w-]{2,4}$')
+                  .hasMatch(value)) {
+                return 'Enter a valid email';
+              }
+              return null;
+            }),
             const SizedBox(height: 16),
-            _buildInputField("Password", Icons.lock_outline_rounded, _passController, "••••••••", isPassword: true, 
-              validator: (value) {
-                if (value == null || value.isEmpty) return 'Please enter a password';
-                if (value.length < 6) return 'Password must be at least 6 characters';
-                return null;
+            _buildInputField("Password", Icons.lock_outline_rounded,
+                _passController, "••••••••", isPassword: true,
+                validator: (value) {
+              if (value == null || value.isEmpty) {
+                return 'Please enter a password';
               }
-            ),
+              if (value.length < 6) {
+                return 'Password must be at least 6 characters';
+              }
+              return null;
+            }),
             const SizedBox(height: 10),
-            _buildInputField("Confirm Password", Icons.lock_outline_rounded, _confirmPassController, "••••••••", isPassword: true,
-              validator: (value) {
-                if (value == null || value.isEmpty) return 'Please confirm your password';
-                return null;
+            _buildInputField("Confirm Password", Icons.lock_outline_rounded,
+                _confirmPassController, "••••••••", isPassword: true,
+                validator: (value) {
+              if (value == null || value.isEmpty) {
+                return 'Please confirm your password';
               }
-            ),
+              return null;
+            }),
             const SizedBox(height: 10),
           ],
         ),
@@ -714,7 +816,8 @@ class _RegistrationPageState extends State<RegistrationPage> {
       items: _regions.map<DropdownMenuItem<String>>((region) {
         return DropdownMenuItem<String>(
           value: region['code'] as String?,
-          child: Text(region['name'] ?? '', style: const TextStyle(fontSize: 13)),
+          child:
+              Text(region['name'] ?? '', style: const TextStyle(fontSize: 13)),
         );
       }).toList(),
       onChanged: (value) async {
@@ -754,7 +857,8 @@ class _RegistrationPageState extends State<RegistrationPage> {
       items: _provinces.map<DropdownMenuItem<String>>((province) {
         return DropdownMenuItem<String>(
           value: province['code'] as String?,
-          child: Text(province['name'] ?? '', style: const TextStyle(fontSize: 13)),
+          child: Text(province['name'] ?? '',
+              style: const TextStyle(fontSize: 13)),
         );
       }).toList(),
       onChanged: (value) async {
@@ -785,7 +889,8 @@ class _RegistrationPageState extends State<RegistrationPage> {
   Widget _buildCityDropdown() {
     return DropdownButtonFormField<String>(
       initialValue: _selectedCityCode,
-      hint: const Text("Select City/Municipality", style: TextStyle(fontSize: 13)),
+      hint: const Text("Select City/Municipality",
+          style: TextStyle(fontSize: 13)),
       decoration: _inputDecoration(null),
       isExpanded: true,
       items: _cities.map<DropdownMenuItem<String>>((city) {
@@ -825,7 +930,8 @@ class _RegistrationPageState extends State<RegistrationPage> {
       items: _barangays.map<DropdownMenuItem<String>>((barangay) {
         return DropdownMenuItem<String>(
           value: barangay['code'] as String?,
-          child: Text(barangay['name'] ?? '', style: const TextStyle(fontSize: 13)),
+          child: Text(barangay['name'] ?? '',
+              style: const TextStyle(fontSize: 13)),
         );
       }).toList(),
       onChanged: (value) {
@@ -851,15 +957,16 @@ class _RegistrationPageState extends State<RegistrationPage> {
         child: Column(
           children: [
             _buildInputField(
-              "Current Job Title / Profession", 
-              Icons.work_outline, 
-              _currentJobController, 
-              "e.g. Software Developer, Teacher, Engineer",
-              validator: (value) {
-                if (value == null || value.isEmpty) return 'Please enter your job title';
-                return null;
+                "Current Job Title / Profession",
+                Icons.work_outline,
+                _currentJobController,
+                "e.g. Software Developer, Teacher, Engineer",
+                validator: (value) {
+              if (value == null || value.isEmpty) {
+                return 'Please enter your job title';
               }
-            ),
+              return null;
+            }),
             const SizedBox(height: 4),
             Row(
               mainAxisAlignment: MainAxisAlignment.end,
@@ -868,7 +975,10 @@ class _RegistrationPageState extends State<RegistrationPage> {
                 const SizedBox(width: 4),
                 Text(
                   "You can change it later",
-                  style: TextStyle(color: Colors.grey[400], fontSize: 11, fontStyle: FontStyle.italic),
+                  style: TextStyle(
+                      color: Colors.grey[400],
+                      fontSize: 11,
+                      fontStyle: FontStyle.italic),
                 ),
               ],
             ),
@@ -882,7 +992,8 @@ class _RegistrationPageState extends State<RegistrationPage> {
               ),
               child: Column(
                 children: [
-                  const Icon(Icons.work_history_outlined, size: 36, color: Color(0xFFB30000)),
+                  const Icon(Icons.work_history_outlined,
+                      size: 36, color: Color(0xFFB30000)),
                   const SizedBox(height: 12),
                   const Text(
                     "Complete Your Profile",
@@ -897,14 +1008,19 @@ class _RegistrationPageState extends State<RegistrationPage> {
                   const SizedBox(height: 12),
                   OutlinedButton(
                     onPressed: () {
-                      _showSuccessSnackBar('Full career profile feature coming soon!');
+                      _showSuccessSnackBar(
+                          'Full career profile feature coming soon!');
                     },
                     style: OutlinedButton.styleFrom(
                       side: const BorderSide(color: Color(0xFFB30000)),
-                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
-                      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                      shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(10)),
+                      padding: const EdgeInsets.symmetric(
+                          horizontal: 16, vertical: 8),
                     ),
-                    child: const Text("Add More Details", style: TextStyle(color: Color(0xFFB30000), fontSize: 12)),
+                    child: const Text("Add More Details",
+                        style:
+                            TextStyle(color: Color(0xFFB30000), fontSize: 12)),
                   ),
                 ],
               ),
@@ -931,37 +1047,61 @@ class _RegistrationPageState extends State<RegistrationPage> {
               ),
               child: Column(
                 children: [
-                  const Icon(Icons.verified_user_outlined, size: 40, color: Color(0xFFB30000)),
+                  const Icon(Icons.verified_user_outlined,
+                      size: 40, color: Color(0xFFB30000)),
                   const SizedBox(height: 12),
                   const Text(
-                    "Identity Verification",
+                    "Identity Verification (Optional)",
                     style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
                   ),
                   const SizedBox(height: 8),
                   const Text(
-                    "Please verify your identity to ensure the safety of our community",
+                    "Verifying your identity helps build trust in our community. You can skip this now and verify later.",
                     textAlign: TextAlign.center,
                     style: TextStyle(color: Colors.grey, fontSize: 12),
                   ),
                   const SizedBox(height: 20),
                   _buildVerificationOption(
                     Icons.credit_card_outlined,
-                    "Government ID",
-                    _frontIdImage != null && _backIdImage != null 
-                        ? "ID uploaded ✓" 
-                        : "Upload front and back of your ID",
+                    "Government ID (Optional)",
+                    _frontIdImage != null && _backIdImage != null
+                        ? "ID uploaded ✓"
+                        : "Upload front and back of your ID (optional)",
                     isCompleted: _frontIdImage != null && _backIdImage != null,
                     onTap: _showIdCaptureDialog,
                   ),
                   const SizedBox(height: 10),
                   _buildVerificationOption(
                     Icons.camera_alt_outlined,
-                    "Selfie Verification",
-                    _selfieImage != null 
-                        ? "Selfie uploaded ✓" 
-                        : "Take a photo of yourself",
+                    "Selfie Verification (Optional)",
+                    _selfieImage != null
+                        ? "Selfie uploaded ✓"
+                        : "Take a photo of yourself (optional)",
                     isCompleted: _selfieImage != null,
                     onTap: _showSelfieCaptureDialog,
+                  ),
+                  const SizedBox(height: 16),
+                  Container(
+                    padding: const EdgeInsets.all(12),
+                    decoration: BoxDecoration(
+                      color: Colors.blue[50],
+                      borderRadius: BorderRadius.circular(10),
+                      border: Border.all(color: Colors.blue[200]!),
+                    ),
+                    child: Row(
+                      children: [
+                        Icon(Icons.info_outline,
+                            size: 16, color: Colors.blue[700]),
+                        const SizedBox(width: 8),
+                        Expanded(
+                          child: Text(
+                            "You can verify your identity later from your profile settings.",
+                            style: TextStyle(
+                                color: Colors.blue[700], fontSize: 11),
+                          ),
+                        ),
+                      ],
+                    ),
                   ),
                 ],
               ),
@@ -973,7 +1113,7 @@ class _RegistrationPageState extends State<RegistrationPage> {
     );
   }
 
-  Widget _buildVerificationOption(IconData icon, String title, String subtitle, 
+  Widget _buildVerificationOption(IconData icon, String title, String subtitle,
       {required VoidCallback onTap, bool isCompleted = false}) {
     return InkWell(
       onTap: onTap,
@@ -992,16 +1132,14 @@ class _RegistrationPageState extends State<RegistrationPage> {
             Container(
               padding: const EdgeInsets.all(8),
               decoration: BoxDecoration(
-                color: isCompleted 
+                color: isCompleted
                     ? Colors.green.withValues(alpha: .1)
                     : const Color(0xFFB30000).withValues(alpha: .1),
                 borderRadius: BorderRadius.circular(8),
               ),
-              child: Icon(
-                isCompleted ? Icons.check_circle : icon, 
-                color: isCompleted ? Colors.green : const Color(0xFFB30000), 
-                size: 20
-              ),
+              child: Icon(isCompleted ? Icons.check_circle : icon,
+                  color: isCompleted ? Colors.green : const Color(0xFFB30000),
+                  size: 20),
             ),
             const SizedBox(width: 12),
             Expanded(
@@ -1009,27 +1147,26 @@ class _RegistrationPageState extends State<RegistrationPage> {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Text(
-                    title, 
+                    title,
                     style: TextStyle(
-                      fontWeight: FontWeight.w600, 
+                      fontWeight: FontWeight.w600,
                       fontSize: 13,
                       color: isCompleted ? Colors.green : Colors.black,
                     ),
                   ),
                   const SizedBox(height: 2),
                   Text(
-                    subtitle, 
+                    subtitle,
                     style: TextStyle(
-                      color: isCompleted ? Colors.green : Colors.grey[600], 
-                      fontSize: 11
-                    ),
+                        color: isCompleted ? Colors.green : Colors.grey[600],
+                        fontSize: 11),
                   ),
                 ],
               ),
             ),
             Icon(
-              isCompleted ? Icons.check_circle : Icons.arrow_forward_ios, 
-              size: 14, 
+              isCompleted ? Icons.check_circle : Icons.arrow_forward_ios,
+              size: 14,
               color: isCompleted ? Colors.green : Colors.grey[400],
             ),
           ],
@@ -1044,46 +1181,66 @@ class _RegistrationPageState extends State<RegistrationPage> {
       child: Row(
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
-          Text("Already have an account? ", style: TextStyle(color: Colors.grey[700], fontSize: 13)),
+          Text("Already have an account? ",
+              style: TextStyle(color: Colors.grey[700], fontSize: 13)),
           GestureDetector(
-            onTap: () => Navigator.pushReplacement(context, MaterialPageRoute(builder: (context) => const LoginPage())),
-            child: const Text("Sign In", style: TextStyle(color: Color(0xFFB30000), fontWeight: FontWeight.w800, fontSize: 13)),
+            onTap: () => Navigator.pushReplacement(context,
+                MaterialPageRoute(builder: (context) => const LoginPage())),
+            child: const Text("Sign In",
+                style: TextStyle(
+                    color: Color(0xFFB30000),
+                    fontWeight: FontWeight.w800,
+                    fontSize: 13)),
           ),
         ],
       ),
     );
   }
 
-  Widget _buildActionButton(String text, VoidCallback onPressed, {required bool isPrimary}) {
+  Widget _buildActionButton(String text, VoidCallback onPressed,
+      {required bool isPrimary}) {
     return Container(
       height: 48,
       width: 160,
-      decoration: isPrimary ? BoxDecoration(
-        borderRadius: BorderRadius.circular(14),
-        boxShadow: [
-          BoxShadow(color: const Color(0xFFB30000).withValues(alpha: .3), blurRadius: 10, offset: const Offset(0, 4)),
-        ],
-      ) : null,
+      decoration: isPrimary
+          ? BoxDecoration(
+              borderRadius: BorderRadius.circular(14),
+              boxShadow: [
+                BoxShadow(
+                    color: const Color(0xFFB30000).withValues(alpha: .3),
+                    blurRadius: 10,
+                    offset: const Offset(0, 4)),
+              ],
+            )
+          : null,
       child: isPrimary
           ? ElevatedButton(
               onPressed: onPressed,
               style: ElevatedButton.styleFrom(
                 backgroundColor: const Color(0xFFB30000),
                 foregroundColor: Colors.white,
-                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+                shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(14)),
                 elevation: 0,
                 padding: EdgeInsets.zero,
               ),
-              child: Text(text, style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 14)),
+              child: Text(text,
+                  style: const TextStyle(
+                      fontWeight: FontWeight.bold, fontSize: 14)),
             )
           : OutlinedButton(
               onPressed: onPressed,
               style: OutlinedButton.styleFrom(
                 side: const BorderSide(color: Color(0xFFB30000), width: 1.5),
-                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+                shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(14)),
                 padding: EdgeInsets.zero,
               ),
-              child: Text(text, style: const TextStyle(color: Color(0xFFB30000), fontWeight: FontWeight.bold, fontSize: 14)),
+              child: Text(text,
+                  style: const TextStyle(
+                      color: Color(0xFFB30000),
+                      fontWeight: FontWeight.bold,
+                      fontSize: 14)),
             ),
     );
   }
@@ -1094,8 +1251,8 @@ class _RegistrationPageState extends State<RegistrationPage> {
       width: double.infinity,
       decoration: const BoxDecoration(
         gradient: LinearGradient(
-          colors: [Color(0xFFB30000), Color(0xFF8A0000)], 
-          begin: Alignment.topLeft, 
+          colors: [Color(0xFFB30000), Color(0xFF8A0000)],
+          begin: Alignment.topLeft,
           end: Alignment.bottomRight,
         ),
         borderRadius: BorderRadius.only(bottomLeft: Radius.circular(60)),
@@ -1109,15 +1266,16 @@ class _RegistrationPageState extends State<RegistrationPage> {
               color: Colors.white.withValues(alpha: 0.08),
               shape: BoxShape.circle,
             ),
-            child: const Icon(Icons.person_add_rounded, size: 32, color: Colors.white),
+            child: const Icon(Icons.person_add_rounded,
+                size: 32, color: Colors.white),
           ),
           const SizedBox(height: 8),
           const Text(
             "JOIN US",
             style: TextStyle(
-              color: Colors.white, 
-              fontSize: 20, 
-              fontWeight: FontWeight.w900, 
+              color: Colors.white,
+              fontSize: 20,
+              fontWeight: FontWeight.w900,
               letterSpacing: 3,
             ),
           ),
@@ -1131,9 +1289,9 @@ class _RegistrationPageState extends State<RegistrationPage> {
   }
 
   Widget _buildInputField(
-    String label, 
-    IconData icon, 
-    TextEditingController? controller, 
+    String label,
+    IconData icon,
+    TextEditingController? controller,
     String hint, {
     bool isPassword = false,
     bool enabled = true,
@@ -1142,7 +1300,11 @@ class _RegistrationPageState extends State<RegistrationPage> {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Text(label, style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 12, color: Color(0xFF444444))),
+        Text(label,
+            style: const TextStyle(
+                fontWeight: FontWeight.w600,
+                fontSize: 12,
+                color: Color(0xFF444444))),
         const SizedBox(height: 6),
         TextFormField(
           controller: controller,
@@ -1153,11 +1315,18 @@ class _RegistrationPageState extends State<RegistrationPage> {
           decoration: _inputDecoration(icon).copyWith(
             hintText: hint,
             hintStyle: TextStyle(color: Colors.grey[400], fontSize: 13),
-            contentPadding: const EdgeInsets.symmetric(vertical: 12, horizontal: 14),
+            contentPadding:
+                const EdgeInsets.symmetric(vertical: 12, horizontal: 14),
             suffixIcon: isPassword
                 ? IconButton(
-                    icon: Icon(_isPasswordVisible ? Icons.visibility_off_rounded : Icons.visibility_rounded, color: Colors.grey[400], size: 18),
-                    onPressed: () => setState(() => _isPasswordVisible = !_isPasswordVisible),
+                    icon: Icon(
+                        _isPasswordVisible
+                            ? Icons.visibility_off_rounded
+                            : Icons.visibility_rounded,
+                        color: Colors.grey[400],
+                        size: 18),
+                    onPressed: () => setState(
+                        () => _isPasswordVisible = !_isPasswordVisible),
                     padding: EdgeInsets.zero,
                     constraints: const BoxConstraints(),
                   )
@@ -1170,18 +1339,18 @@ class _RegistrationPageState extends State<RegistrationPage> {
 
   InputDecoration _inputDecoration(IconData? icon) {
     return InputDecoration(
-      prefixIcon: icon != null ? Icon(icon, color: const Color(0xFFB30000), size: 18) : null,
+      prefixIcon: icon != null
+          ? Icon(icon, color: const Color(0xFFB30000), size: 18)
+          : null,
       filled: true,
       fillColor: Colors.grey[50],
       contentPadding: const EdgeInsets.symmetric(vertical: 12, horizontal: 14),
       enabledBorder: OutlineInputBorder(
-        borderRadius: BorderRadius.circular(12), 
-        borderSide: BorderSide(color: Colors.grey[200]!, width: 1.2)
-      ),
+          borderRadius: BorderRadius.circular(12),
+          borderSide: BorderSide(color: Colors.grey[200]!, width: 1.2)),
       focusedBorder: OutlineInputBorder(
-        borderRadius: BorderRadius.circular(12), 
-        borderSide: const BorderSide(color: Color(0xFFB30000), width: 1.2)
-      ),
+          borderRadius: BorderRadius.circular(12),
+          borderSide: const BorderSide(color: Color(0xFFB30000), width: 1.2)),
       errorBorder: OutlineInputBorder(
         borderRadius: BorderRadius.circular(12),
         borderSide: const BorderSide(color: Colors.red, width: 1.2),
