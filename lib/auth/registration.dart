@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
 import 'dart:convert';
+import 'dart:developer' as developer;
 import 'package:image_picker/image_picker.dart';
 import 'dart:io';
 import 'package:enricoso/auth/login.dart';
@@ -210,15 +211,23 @@ class _RegistrationPageState extends State<RegistrationPage> {
     setState(() => _isLoading = true);
 
     try {
-      // Use the correct URL based on your setup
-      // For Android Emulator: http://10.0.2.2:8888/enricoso/registration.php
-      // For iOS Simulator: http://localhost:8888/enricoso/registration.php
-      // For Physical Device: http://[your-ip]:8888/enricoso/registration.php
-
-      var request = http.MultipartRequest(
-          'POST',
-          Uri.parse(
-              'http://localhost:8888/enricoso/registration.php')); // Use this for Android emulator
+      // Determine the correct URL based on platform
+      String apiUrl;
+      
+      if (Platform.isAndroid) {
+        // For Android emulator
+        apiUrl = 'http://10.0.2.2/enricoso/api/registration.php';
+      } else if (Platform.isIOS) {
+        // For iOS simulator
+        apiUrl = 'http://localhost/enricoso/api/registration.php';
+      } else {
+        // For physical device - replace with your computer's IP
+        apiUrl = 'http://192.168.1.38/enricoso/api/registration.php'; // Change this to your IP
+      }
+      
+      developer.log('Submitting to URL: $apiUrl');
+      
+      var request = http.MultipartRequest('POST', Uri.parse(apiUrl));
 
       // Add text fields
       request.fields.addAll({
@@ -251,12 +260,14 @@ class _RegistrationPageState extends State<RegistrationPage> {
             await http.MultipartFile.fromPath('selfie', _selfieImage!.path));
       }
 
+      developer.log('Sending request with fields: ${request.fields}');
+      
       var response = await request.send();
       var responseData = await response.stream.bytesToString();
 
-      // Debug: Print the raw response
-      print('Raw response: $responseData');
-
+      developer.log('Response status: ${response.statusCode}');
+      developer.log('Response body: $responseData');
+      
       // Check if response is empty
       if (responseData.isEmpty) {
         _showErrorSnackBar('Server returned empty response');
@@ -268,8 +279,7 @@ class _RegistrationPageState extends State<RegistrationPage> {
       try {
         jsonResponse = json.decode(responseData);
       } catch (e) {
-        print('JSON parsing error: $e');
-        print('Response was: $responseData');
+        developer.log('JSON parsing error: $e');
         _showErrorSnackBar('Server error: Invalid response format');
         return;
       }
@@ -287,7 +297,7 @@ class _RegistrationPageState extends State<RegistrationPage> {
       }
     } catch (e) {
       if (!mounted) return;
-      print('Registration error: $e');
+      developer.log('Connection error: $e');
       _showErrorSnackBar('Connection error: $e');
     } finally {
       if (mounted) {

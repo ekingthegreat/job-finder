@@ -15,13 +15,13 @@ class LoginPage extends StatefulWidget {
 class _LoginPageState extends State<LoginPage> {
   bool _isPasswordVisible = false;
   bool _isLoading = false;
-  final TextEditingController _emailController = TextEditingController();
+  final TextEditingController _usernameController = TextEditingController();
   final TextEditingController _passwordController = TextEditingController();
 
   // Base URL - Change this based on your environment
-  // For Android Emulator: http://10.0.2.2:8888
-  // For iOS Simulator: http://localhost:8888
-  // For Physical Device: http://[your-ip]:8888
+  // For Android Emulator: http://10.0.2.2
+  // For iOS Simulator: http://localhost
+  // For Physical Device: http://[your-ip]
   final String baseUrl = 'http://127.0.0.1:8888';
 
   @override
@@ -43,16 +43,17 @@ class _LoginPageState extends State<LoginPage> {
   }
 
   Future<void> _handleSignIn() async {
-    final String email = _emailController.text.trim();
+    final String username = _usernameController.text.trim();
     final String password = _passwordController.text.trim();
 
-    if (email.isEmpty || password.isEmpty) {
+    if (username.isEmpty || password.isEmpty) {
       _showSnackBar("Please fill in all fields", isError: true);
       return;
     }
 
-    if (!RegExp(r'^[\w-\.]+@([\w-]+\.)+[\w-]{2,4}$').hasMatch(email)) {
-      _showSnackBar("Please enter a valid email address", isError: true);
+    // Username validation (letters, numbers, underscore only, 3-20 characters)
+    if (!RegExp(r'^[a-zA-Z0-9_]{3,20}$').hasMatch(username)) {
+      _showSnackBar("Username must be 3-20 characters (letters, numbers, underscore)", isError: true);
       return;
     }
 
@@ -62,38 +63,34 @@ class _LoginPageState extends State<LoginPage> {
 
     try {
       final response = await http.post(
-        Uri.parse('$baseUrl/enricoso/login.php'),
+        Uri.parse('$baseUrl/enricoso/api/login.php'),
         headers: {'Content-Type': 'application/json'},
         body: json.encode({
-          'email': email,
+          'username': username,
           'password': password,
         }),
       ).timeout(const Duration(seconds: 30));
 
-      // Check if widget is still mounted before using context
       if (!mounted) return;
 
       final Map<String, dynamic> responseData = json.decode(response.body);
 
       if (response.statusCode == 200 && responseData['status'] == 'success') {
-        await _saveUserSession(responseData['user']);
+        await _saveUserSession(responseData['data']);
         
-        // Check mounted again after async operation
         if (!mounted) return;
         
-        _showSnackBar("Welcome back, ${responseData['user']['fullname']}!", isError: false);
+        _showSnackBar("Welcome back, ${responseData['data']['fullname']}!", isError: false);
 
         Navigator.pushReplacement(
           context,
           MaterialPageRoute(builder: (context) => const JobListingPage()),
         );
       } else {
-        // Check mounted before showing snackbar
         if (!mounted) return;
-        _showSnackBar(responseData['message'] ?? 'Invalid email or password', isError: true);
+        _showSnackBar(responseData['message'] ?? 'Invalid username or password', isError: true);
       }
     } catch (e) {
-      // Check mounted before showing snackbar
       if (!mounted) return;
       _showSnackBar('Connection error. Please check your internet connection.', isError: true);
       debugPrint('Login error: $e');
@@ -116,7 +113,6 @@ class _LoginPageState extends State<LoginPage> {
   }
 
   void _showSnackBar(String message, {required bool isError}) {
-    // Check if mounted before showing snackbar
     if (!mounted) return;
     
     ScaffoldMessenger.of(context).showSnackBar(
@@ -132,7 +128,7 @@ class _LoginPageState extends State<LoginPage> {
 
   @override
   void dispose() {
-    _emailController.dispose();
+    _usernameController.dispose();
     _passwordController.dispose();
     super.dispose();
   }
@@ -173,10 +169,10 @@ class _LoginPageState extends State<LoginPage> {
                       const SizedBox(height: 40),
 
                       _buildInputField(
-                        label: "Email Address",
-                        icon: Icons.email_outlined,
-                        controller: _emailController,
-                        hint: "john@example.com",
+                        label: "Username",
+                        icon: Icons.person_outline,
+                        controller: _usernameController,
+                        hint: "johndoe123",
                       ),
                       const SizedBox(height: 25),
 
@@ -356,7 +352,7 @@ class _LoginPageState extends State<LoginPage> {
           controller: controller,
           obscureText: isPassword && !_isPasswordVisible,
           style: const TextStyle(fontSize: 15, fontWeight: FontWeight.w500),
-          keyboardType: isPassword ? TextInputType.visiblePassword : TextInputType.emailAddress,
+          keyboardType: isPassword ? TextInputType.visiblePassword : TextInputType.text,
           textInputAction: isPassword ? TextInputAction.done : TextInputAction.next,
           onSubmitted: (value) {
             if (isPassword) {
