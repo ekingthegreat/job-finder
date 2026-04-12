@@ -1,8 +1,7 @@
-# 💼 Job Finder Web Application
+# 💼 Job Finder Mobile Application
 
-A simple and responsive Job Finder Web Application built using PHP and MySQL.  
-This system allows users to browse job listings, view details, and apply for jobs.
-
+A simple and responsive **Job Finder Mobile Application** built using Flutter for the frontend and PHP with MySQL for the backend.
+This app allows users to browse job listings, view job details, and apply for jobs directly from their mobile devices.
 ---
 
 ## 🚀 Features
