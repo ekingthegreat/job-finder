@@ -196,24 +196,26 @@ class _RegistrationPageState extends State<RegistrationPage> {
     }
   }
 
-  Future<void> _submitRegistration() async {
-    if (!_formKey1.currentState!.validate() ||
-        !_formKey2.currentState!.validate() ||
-        !_formKey3.currentState!.validate()) {
-      return;
-    }
+ Future<void> _submitRegistration() async {
+  if (!_formKey1.currentState!.validate() ||
+      !_formKey2.currentState!.validate() ||
+      !_formKey3.currentState!.validate()) {
+    return;
+  }
 
-    if (_passController.text != _confirmPassController.text) {
-      _showErrorSnackBar('Passwords do not match');
-      return;
-    }
+  if (_passController.text != _confirmPassController.text) {
+    _showErrorSnackBar('Passwords do not match');
+    return;
+  }
 
-    setState(() => _isLoading = true);
+  setState(() => _isLoading = true);
 
+  try {
+    // Determine the correct URL based on platform
+    String apiUrl;
+    
+    // Safe platform detection
     try {
-      // Determine the correct URL based on platform
-      String apiUrl;
-      
       if (Platform.isAndroid) {
         // For Android emulator
         apiUrl = 'http://10.0.2.2/enricoso/api/registration.php';
@@ -221,90 +223,95 @@ class _RegistrationPageState extends State<RegistrationPage> {
         // For iOS simulator
         apiUrl = 'http://localhost/enricoso/api/registration.php';
       } else {
-        // For physical device - replace with your computer's IP
-        apiUrl = 'http://192.168.1.38/enricoso/api/registration.php'; // Change this to your IP
-      }
-      
-      developer.log('Submitting to URL: $apiUrl');
-      
-      var request = http.MultipartRequest('POST', Uri.parse(apiUrl));
-
-      // Add text fields
-      request.fields.addAll({
-        'fullname': _nameController.text,
-        'username': _usernameController.text,
-        'age': _ageController.text,
-        'birthday': _birthdayController.text,
-        'email': _emailController.text,
-        'password': _passController.text,
-        'address': _buildFullAddress(),
-        'job': _currentJobController.text,
-        'street_address': _streetAddressController.text,
-        'region': _selectedRegionName ?? '',
-        'province': _selectedProvinceName ?? '',
-        'city': _selectedCityName ?? '',
-        'barangay': _selectedBarangayName ?? '',
-      });
-
-      // Add files only if they exist (optional)
-      if (_frontIdImage != null) {
-        request.files.add(
-            await http.MultipartFile.fromPath('front_id', _frontIdImage!.path));
-      }
-      if (_backIdImage != null) {
-        request.files.add(
-            await http.MultipartFile.fromPath('back_id', _backIdImage!.path));
-      }
-      if (_selfieImage != null) {
-        request.files.add(
-            await http.MultipartFile.fromPath('selfie', _selfieImage!.path));
-      }
-
-      developer.log('Sending request with fields: ${request.fields}');
-      
-      var response = await request.send();
-      var responseData = await response.stream.bytesToString();
-
-      developer.log('Response status: ${response.statusCode}');
-      developer.log('Response body: $responseData');
-      
-      // Check if response is empty
-      if (responseData.isEmpty) {
-        _showErrorSnackBar('Server returned empty response');
-        return;
-      }
-
-      // Try to parse JSON
-      Map<String, dynamic> jsonResponse;
-      try {
-        jsonResponse = json.decode(responseData);
-      } catch (e) {
-        developer.log('JSON parsing error: $e');
-        _showErrorSnackBar('Server error: Invalid response format');
-        return;
-      }
-
-      if (!mounted) return;
-
-      if (jsonResponse['status'] == 'success') {
-        _showSuccessSnackBar(jsonResponse['message']);
-        Navigator.pushReplacement(
-          context,
-          MaterialPageRoute(builder: (context) => const LoginPage()),
-        );
-      } else {
-        _showErrorSnackBar(jsonResponse['message'] ?? 'Registration failed');
+        // For web or other platforms
+        apiUrl = 'http://localhost/enricoso/api/registration.php';
       }
     } catch (e) {
-      if (!mounted) return;
-      developer.log('Connection error: $e');
-      _showErrorSnackBar('Connection error: $e');
-    } finally {
-      if (mounted) {
-        setState(() => _isLoading = false);
-      }
+      // Fallback URL if platform detection fails
+      print('Platform detection error: $e');
+      apiUrl = 'http://localhost/enricoso/api/registration.php';
+    }
+    
+    developer.log('Submitting to URL: $apiUrl');
+    
+    var request = http.MultipartRequest('POST', Uri.parse(apiUrl));
+
+    // Add text fields
+    request.fields.addAll({
+      'fullname': _nameController.text,
+      'username': _usernameController.text,
+      'age': _ageController.text,
+      'birthday': _birthdayController.text,
+      'email': _emailController.text,
+      'password': _passController.text,
+      'address': _buildFullAddress(),
+      'job': _currentJobController.text,
+      'street_address': _streetAddressController.text,
+      'region': _selectedRegionName ?? '',
+      'province': _selectedProvinceName ?? '',
+      'city': _selectedCityName ?? '',
+      'barangay': _selectedBarangayName ?? '',
+    });
+
+    // Add files only if they exist (optional)
+    if (_frontIdImage != null) {
+      request.files.add(
+          await http.MultipartFile.fromPath('front_id', _frontIdImage!.path));
+    }
+    if (_backIdImage != null) {
+      request.files.add(
+          await http.MultipartFile.fromPath('back_id', _backIdImage!.path));
+    }
+    if (_selfieImage != null) {
+      request.files.add(
+          await http.MultipartFile.fromPath('selfie', _selfieImage!.path));
+    }
+
+    developer.log('Sending request with fields: ${request.fields}');
+    
+    var response = await request.send();
+    var responseData = await response.stream.bytesToString();
+
+    developer.log('Response status: ${response.statusCode}');
+    developer.log('Response body: $responseData');
+    
+    // Check if response is empty
+    if (responseData.isEmpty) {
+      _showErrorSnackBar('Server returned empty response');
+      return;
+    }
+
+    // Try to parse JSON
+    Map<String, dynamic> jsonResponse;
+    try {
+      jsonResponse = json.decode(responseData);
+    } catch (e) {
+      developer.log('JSON parsing error: $e');
+      _showErrorSnackBar('Server error: Invalid response format');
+      return;
+    }
+
+    if (!mounted) return;
+
+    if (jsonResponse['status'] == 'success') {
+      _showSuccessSnackBar(jsonResponse['message']);
+      Navigator.pushReplacement(
+        context,
+        MaterialPageRoute(builder: (context) => const LoginPage()),
+      );
+    } else {
+      _showErrorSnackBar(jsonResponse['message'] ?? 'Registration failed');
+    }
+  } catch (e) {
+    if (!mounted) return;
+    developer.log('Connection error: $e');
+    _showErrorSnackBar('Connection error: $e');
+  } finally {
+    if (mounted) {
+      setState(() => _isLoading = false);
     }
   }
+}
 
   String _buildFullAddress() {
     List<String> parts = [];

@@ -4,6 +4,7 @@ import 'dart:convert';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:enricoso/auth/registration.dart';
 import 'package:enricoso/features/job_seeker/job_seeker_shell/joblisting.dart';
+import 'dart:io';
 
 class LoginPage extends StatefulWidget {
   const LoginPage({super.key});
@@ -18,11 +19,26 @@ class _LoginPageState extends State<LoginPage> {
   final TextEditingController _usernameController = TextEditingController();
   final TextEditingController _passwordController = TextEditingController();
 
-  // Base URL - Change this based on your environment
-  // For Android Emulator: http://10.0.2.2
-  // For iOS Simulator: http://localhost
-  // For Physical Device: http://[your-ip]
-  final String baseUrl = 'http://127.0.0.1:8888';
+  // Use the SAME pattern as registration
+  Future<String> _getApiUrl() async {
+    // Safe platform detection (same as registration)
+    try {
+      if (Platform.isAndroid) {
+        // For Android emulator
+        return 'http://10.0.2.2/enricoso/api/login.php';
+      } else if (Platform.isIOS) {
+        // For iOS simulator
+        return 'http://localhost/enricoso/api/login.php';
+      } else {
+        // For web or other platforms
+        return 'http://localhost/enricoso/api/login.php';
+      }
+    } catch (e) {
+      // Fallback URL if platform detection fails
+      print('Platform detection error: $e');
+      return 'http://localhost/enricoso/api/login.php';
+    }
+  }
 
   @override
   void initState() {
@@ -62,8 +78,12 @@ class _LoginPageState extends State<LoginPage> {
     });
 
     try {
+      // Get the URL using the same method as registration
+      final String apiUrl = await _getApiUrl();
+      print('Attempting to connect to: $apiUrl');
+      
       final response = await http.post(
-        Uri.parse('$baseUrl/enricoso/api/login.php'),
+        Uri.parse(apiUrl),
         headers: {'Content-Type': 'application/json'},
         body: json.encode({
           'username': username,
@@ -71,29 +91,37 @@ class _LoginPageState extends State<LoginPage> {
         }),
       ).timeout(const Duration(seconds: 30));
 
+      print('Response status code: ${response.statusCode}');
+      print('Response body: ${response.body}');
+
       if (!mounted) return;
 
-      final Map<String, dynamic> responseData = json.decode(response.body);
-
-      if (response.statusCode == 200 && responseData['status'] == 'success') {
-        await _saveUserSession(responseData['data']);
+      if (response.statusCode == 200) {
+        final Map<String, dynamic> responseData = json.decode(response.body);
         
-        if (!mounted) return;
-        
-        _showSnackBar("Welcome back, ${responseData['data']['fullname']}!", isError: false);
+        if (responseData['status'] == 'success') {
+          // The user data is inside responseData['data']['user']
+          final userData = responseData['data']['user'];
+          await _saveUserSession(userData);
+          
+          if (!mounted) return;
+          
+          _showSnackBar("Welcome back, ${userData['fullname']}!", isError: false);
 
-        Navigator.pushReplacement(
-          context,
-          MaterialPageRoute(builder: (context) => const JobListingPage()),
-        );
+          Navigator.pushReplacement(
+            context,
+            MaterialPageRoute(builder: (context) => const JobListingPage()),
+          );
+        } else {
+          _showSnackBar(responseData['message'] ?? 'Invalid username or password', isError: true);
+        }
       } else {
-        if (!mounted) return;
-        _showSnackBar(responseData['message'] ?? 'Invalid username or password', isError: true);
+        _showSnackBar('Server error: ${response.statusCode}', isError: true);
       }
     } catch (e) {
       if (!mounted) return;
+      print('Login error details: $e');
       _showSnackBar('Connection error. Please check your internet connection.', isError: true);
-      debugPrint('Login error: $e');
     } finally {
       if (mounted) {
         setState(() {
@@ -110,6 +138,7 @@ class _LoginPageState extends State<LoginPage> {
     await prefs.setString('user_email', user['email']);
     await prefs.setString('user_username', user['username']);
     await prefs.setBool('is_logged_in', true);
+    await prefs.setBool('is_verified', user['is_verified'] ?? false);
   }
 
   void _showSnackBar(String message, {required bool isError}) {
