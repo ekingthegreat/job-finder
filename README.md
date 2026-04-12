@@ -25,4 +25,6 @@ This system allows users to browse job listings, view details, and apply for job
 
 ---
 
-## 📁 Project Structure
+## 👨‍💻 Author
+
+Michael Martinez
