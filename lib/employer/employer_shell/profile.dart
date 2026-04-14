@@ -1,8 +1,113 @@
 import 'package:flutter/material.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import '../../features/job_seeker/job_seeker_shell/joblisting.dart';
 
-class EmployerProfile extends StatelessWidget {
+class EmployerProfile extends StatefulWidget {
   const EmployerProfile({super.key});
+
+  @override
+  State<EmployerProfile> createState() => _EmployerProfileState();
+}
+
+class _EmployerProfileState extends State<EmployerProfile> {
+  Map<String, dynamic>? _userData;
+  bool _isLoading = true;
+
+  @override
+  void initState() {
+    super.initState();
+    _loadUserSession();
+  }
+
+  Future<void> _loadUserSession() async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      
+      final userId = prefs.getInt('user_id');
+      final fullname = prefs.getString('user_fullname');
+      final email = prefs.getString('user_email');
+      final username = prefs.getString('user_username');
+      final isVerified = prefs.getBool('is_verified') ?? false;
+      
+      // Print session for debugging
+      print('\n========== EMPLOYER PROFILE PAGE - USER SESSION ==========');
+      print('User ID: $userId');
+      print('Full Name: $fullname');
+      print('Username: $username');
+      print('Email: $email');
+      print('Is Verified: $isVerified');
+      print('==========================================================\n');
+      
+      if (userId != null && fullname != null) {
+        setState(() {
+          _userData = {
+            'id': userId,
+            'fullname': fullname,
+            'email': email ?? '',
+            'username': username ?? '',
+            'is_verified': isVerified,
+          };
+          _isLoading = false;
+        });
+      } else {
+        setState(() {
+          _isLoading = false;
+        });
+        print('No user session found - using default employer data');
+      }
+    } catch (e) {
+      print('Error loading user session: $e');
+      setState(() {
+        _isLoading = false;
+      });
+    }
+  }
+
+  void _handleLogout() async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.clear();
+    if (mounted) {
+      Navigator.pushReplacementNamed(context, '/login');
+    }
+  }
+
+  void _printSessionDebug() async {
+    final prefs = await SharedPreferences.getInstance();
+    print('\n=== EMPLOYER PROFILE DEBUG: ALL SESSION DATA ===');
+    final keys = prefs.getKeys();
+    for (String key in keys) {
+      print('$key: ${prefs.get(key)}');
+    }
+    print('================================================\n');
+    
+    if (mounted) {
+      showDialog(
+        context: context,
+        builder: (context) => AlertDialog(
+          title: const Text('Session Information'),
+          content: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text('User: ${_userData?['fullname'] ?? 'Not logged in'}'),
+              Text('Email: ${_userData?['email'] ?? 'N/A'}'),
+              Text('Username: ${_userData?['username'] ?? 'N/A'}'),
+              Text('User ID: ${_userData?['id'] ?? 'N/A'}'),
+              Text('Verified: ${_userData?['is_verified'] == true ? 'Yes' : 'No'}'),
+              const Divider(),
+              const Text('Viewing as: Employer'),
+            ],
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(context),
+              child: const Text('Close'),
+            ),
+          ],
+        ),
+      );
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -15,6 +120,17 @@ class EmployerProfile extends StatelessWidget {
     final double titleFontSize = (screenWidth * 0.045).clamp(16.0, 20.0);
     final double bodyFontSize = (screenWidth * 0.04).clamp(14.0, 16.0);
     final double smallFontSize = (screenWidth * 0.032).clamp(12.0, 14.0);
+
+    if (_isLoading) {
+      return const Scaffold(
+        backgroundColor: Color(0xFFF5F5F5),
+        body: Center(
+          child: CircularProgressIndicator(
+            color: Color(0xFFB30000),
+          ),
+        ),
+      );
+    }
 
     return Scaffold(
       backgroundColor: const Color(0xFFF5F5F5),
@@ -62,9 +178,17 @@ class EmployerProfile extends StatelessWidget {
                                   fontWeight: FontWeight.w600,
                                 ),
                               ),
-                              IconButton(
-                                icon: const Icon(Icons.edit, color: Colors.white),
-                                onPressed: () {},
+                              Row(
+                                children: [
+                                  IconButton(
+                                    icon: const Icon(Icons.bug_report, color: Colors.white, size: 20),
+                                    onPressed: _printSessionDebug,
+                                  ),
+                                  IconButton(
+                                    icon: const Icon(Icons.edit, color: Colors.white),
+                                    onPressed: () {},
+                                  ),
+                                ],
                               ),
                             ],
                           ),
@@ -88,7 +212,6 @@ class EmployerProfile extends StatelessWidget {
                                     'img/3.jpg',
                                     fit: BoxFit.cover,
                                     errorBuilder: (context, error, stackTrace) => Container(
-                                      // FIXED: withOpacity -> withValues
                                       color: Colors.white.withValues(alpha: 0.24),
                                       child: Icon(Icons.business, color: Colors.white, size: screenWidth * 0.1),
                                     ),
@@ -96,8 +219,11 @@ class EmployerProfile extends StatelessWidget {
                                 ),
                               ),
                               const SizedBox(height: 12),
+                              // Use session data if available, otherwise keep default
                               Text(
-                                'John Doe',
+                                _userData != null && _userData!['fullname'] != null
+                                    ? _userData!['fullname']
+                                    : 'John Doe',
                                 style: TextStyle(
                                   color: Colors.white,
                                   fontSize: titleFontSize + 2,
@@ -105,7 +231,9 @@ class EmployerProfile extends StatelessWidget {
                                 ),
                               ),
                               Text(
-                                'Tech Solutions Inc.',
+                                _userData != null && _userData!['username'] != null
+                                    ? '@${_userData!['username']} (Employer)'
+                                    : 'Tech Solutions Inc.',
                                 style: TextStyle(
                                   color: Colors.white70,
                                   fontSize: smallFontSize,
@@ -166,8 +294,25 @@ class EmployerProfile extends StatelessWidget {
                         const SizedBox(height: 16),
 
                         _buildProfileCard(screenWidth, 'Company Information', titleFontSize, [
-                          _buildInfoRow(Icons.business, 'Company Name', 'Tech Solutions Inc.', smallFontSize, bodyFontSize),
-                          _buildInfoRow(Icons.email, 'Company Email', 'contact@techsolutions.com', smallFontSize, bodyFontSize),
+                          // Use session data if available, otherwise keep defaults
+                          _buildInfoRow(
+                            Icons.business, 
+                            'Company Name', 
+                            _userData != null && _userData!['fullname'] != null 
+                                ? '${_userData!['fullname']}\'s Company'
+                                : 'Tech Solutions Inc.', 
+                            smallFontSize, 
+                            bodyFontSize
+                          ),
+                          _buildInfoRow(
+                            Icons.email, 
+                            'Company Email', 
+                            _userData != null && _userData!['email'] != null 
+                                ? _userData!['email'] 
+                                : 'contact@techsolutions.com', 
+                            smallFontSize, 
+                            bodyFontSize
+                          ),
                           _buildInfoRow(Icons.phone, 'Company Phone', '+1 800 123 4567', smallFontSize, bodyFontSize),
                           _buildInfoRow(Icons.location_on, 'Address', 'New York, USA', smallFontSize, bodyFontSize),
                           _buildInfoRow(Icons.language, 'Website', 'techsolutions.com', smallFontSize, bodyFontSize),
@@ -190,7 +335,7 @@ class EmployerProfile extends StatelessWidget {
                         ]),
                         const SizedBox(height: 20),
 
-                        _buildLogoutButton(bodyFontSize),
+                        _buildLogoutButton(bodyFontSize, _handleLogout),
                         const SizedBox(height: 40),
                       ],
                     ),
@@ -214,7 +359,6 @@ class EmployerProfile extends StatelessWidget {
         borderRadius: BorderRadius.circular(15),
         boxShadow: [
           BoxShadow(
-            // FIXED: withOpacity -> withValues
             color: Colors.black.withValues(alpha: 0.05), 
             blurRadius: 10, 
             offset: const Offset(0, 4)
@@ -261,20 +405,19 @@ class EmployerProfile extends StatelessWidget {
     );
   }
 
-  Widget _buildLogoutButton(double fontSize) {
+  Widget _buildLogoutButton(double fontSize, VoidCallback onLogout) {
     return Container(
       decoration: BoxDecoration(
         color: Colors.white,
         borderRadius: BorderRadius.circular(15),
         border: Border.all(
-          // FIXED: withOpacity -> withValues
           color: const Color(0xFFB30000).withValues(alpha: 0.2)
         ),
       ),
       child: ListTile(
         leading: const Icon(Icons.logout, color: Color(0xFFB30000)),
         title: Text('Log Out', style: TextStyle(color: const Color(0xFFB30000), fontSize: fontSize, fontWeight: FontWeight.bold)),
-        onTap: () {},
+        onTap: onLogout,
       ),
     );
   }
@@ -283,7 +426,6 @@ class EmployerProfile extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
       decoration: BoxDecoration(
-        // FIXED: withOpacity -> withValues
         color: const Color(0xFFB30000).withValues(alpha: 0.1), 
         borderRadius: BorderRadius.circular(20)
       ),

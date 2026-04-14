@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import 'post_job.dart';
 import 'profile.dart';
 import 'message.dart';      // Import from separate file
@@ -13,10 +14,94 @@ class EmployerDashboard extends StatefulWidget {
 
 class _EmployerDashboardState extends State<EmployerDashboard> {
   int _selectedIndex = 0;
+  Map<String, dynamic>? _userData;
   
   // Badges for messages and notifications
   final int _messageBadgeCount = 5;
   final int _notificationBadgeCount = 2;
+
+  @override
+  void initState() {
+    super.initState();
+    _loadUserSession();
+  }
+
+  Future<void> _loadUserSession() async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      
+      final userId = prefs.getInt('user_id');
+      final fullname = prefs.getString('user_fullname');
+      final email = prefs.getString('user_email');
+      final username = prefs.getString('user_username');
+      final isVerified = prefs.getBool('is_verified') ?? false;
+      final isLoggedIn = prefs.getBool('is_logged_in');
+      
+      // Print session for debugging
+      print('\n========== EMPLOYER DASHBOARD - USER SESSION ==========');
+      print('Is Logged In: $isLoggedIn');
+      print('User ID: $userId');
+      print('Full Name: $fullname');
+      print('Username: $username');
+      print('Email: $email');
+      print('Is Verified: $isVerified');
+      print('=======================================================\n');
+      
+      if (userId != null && fullname != null) {
+        setState(() {
+          _userData = {
+            'id': userId,
+            'fullname': fullname,
+            'email': email ?? '',
+            'username': username ?? '',
+            'is_verified': isVerified,
+          };
+        });
+      } else {
+        print('No user session found in EmployerDashboard');
+      }
+    } catch (e) {
+      print('Error loading user session in EmployerDashboard: $e');
+    }
+  }
+
+  void _printSessionDebug() async {
+    final prefs = await SharedPreferences.getInstance();
+    print('\n=== EMPLOYER DASHBOARD DEBUG: ALL SESSION DATA ===');
+    final keys = prefs.getKeys();
+    for (String key in keys) {
+      print('$key: ${prefs.get(key)}');
+    }
+    print('==================================================\n');
+    
+    if (mounted) {
+      showDialog(
+        context: context,
+        builder: (context) => AlertDialog(
+          title: const Text('Session Information'),
+          content: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text('User: ${_userData?['fullname'] ?? 'Not logged in'}'),
+              Text('Email: ${_userData?['email'] ?? 'N/A'}'),
+              Text('Username: ${_userData?['username'] ?? 'N/A'}'),
+              Text('User ID: ${_userData?['id'] ?? 'N/A'}'),
+              Text('Verified: ${_userData?['is_verified'] == true ? 'Yes' : 'No'}'),
+              const Divider(),
+              const Text('Viewing as: Employer'),
+            ],
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(context),
+              child: const Text('Close'),
+            ),
+          ],
+        ),
+      );
+    }
+  }
 
   @override
   Widget build(BuildContext context) {

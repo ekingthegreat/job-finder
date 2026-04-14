@@ -228,7 +228,7 @@ class _RegistrationPageState extends State<RegistrationPage> {
       }
     } catch (e) {
       // Fallback URL if platform detection fails
-      print('Platform detection error: $e');
+     // print('Platform detection error: $e');
       apiUrl = 'http://localhost/enricoso/api/registration.php';
     }
     

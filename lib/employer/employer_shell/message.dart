@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 class MessagePage extends StatefulWidget {
   const MessagePage({super.key});
@@ -8,6 +9,8 @@ class MessagePage extends StatefulWidget {
 }
 
 class _MessagePageState extends State<MessagePage> {
+  Map<String, dynamic>? _userData;
+  
   final List<Map<String, dynamic>> _messages = [
     {
       'name': 'Tech Innovators Inc.',
@@ -48,6 +51,98 @@ class _MessagePageState extends State<MessagePage> {
   ];
 
   @override
+  void initState() {
+    super.initState();
+    _loadUserSession();
+  }
+
+  Future<void> _loadUserSession() async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      
+      final userId = prefs.getInt('user_id');
+      final fullname = prefs.getString('user_fullname');
+      final email = prefs.getString('user_email');
+      final username = prefs.getString('user_username');
+      final isVerified = prefs.getBool('is_verified') ?? false;
+      final isLoggedIn = prefs.getBool('is_logged_in');
+      
+      // Print session for debugging
+      print('\n========== MESSAGE PAGE - USER SESSION ==========');
+      print('Is Logged In: $isLoggedIn');
+      print('User ID: $userId');
+      print('Full Name: $fullname');
+      print('Username: $username');
+      print('Email: $email');
+      print('Is Verified: $isVerified');
+      print('Total Conversations: ${_messages.length}');
+      print('Unread: ${_messages.where((m) => m['unread'] == true).length}');
+      print('================================================\n');
+      
+      if (userId != null && fullname != null) {
+        setState(() {
+          _userData = {
+            'id': userId,
+            'fullname': fullname,
+            'email': email ?? '',
+            'username': username ?? '',
+            'is_verified': isVerified,
+          };
+        });
+      } else {
+        print('No user session found in MessagePage');
+      }
+    } catch (e) {
+      print('Error loading user session in MessagePage: $e');
+    }
+  }
+
+  void _printSessionDebug() async {
+    final prefs = await SharedPreferences.getInstance();
+    print('\n=== MESSAGE PAGE DEBUG: ALL SESSION DATA ===');
+    final keys = prefs.getKeys();
+    for (String key in keys) {
+      print('$key: ${prefs.get(key)}');
+    }
+    print('=============================================\n');
+    
+    if (mounted) {
+      showDialog(
+        context: context,
+        builder: (context) => AlertDialog(
+          title: const Text('Session Information'),
+          content: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text('User: ${_userData?['fullname'] ?? 'Not logged in'}'),
+              Text('Email: ${_userData?['email'] ?? 'N/A'}'),
+              Text('Username: ${_userData?['username'] ?? 'N/A'}'),
+              Text('User ID: ${_userData?['id'] ?? 'N/A'}'),
+              Text('Verified: ${_userData?['is_verified'] == true ? 'Yes' : 'No'}'),
+              const Divider(),
+              Text('Total Conversations: ${_messages.length}'),
+              Text('Unread: ${_messages.where((m) => m['unread'] == true).length}'),
+            ],
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(context),
+              child: const Text('Close'),
+            ),
+          ],
+        ),
+      );
+    }
+  }
+
+  void _markConversationAsRead(int index) {
+    setState(() {
+      _messages[index]['unread'] = false;
+    });
+  }
+
+  @override
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: const Color(0xFFF5F5F5),
@@ -78,10 +173,10 @@ class _MessagePageState extends State<MessagePage> {
             child: Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
-                const Column(
+                Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Text(
+                    const Text(
                       'Messages',
                       style: TextStyle(
                         color: Colors.white,
@@ -89,25 +184,34 @@ class _MessagePageState extends State<MessagePage> {
                         fontWeight: FontWeight.w700,
                       ),
                     ),
-                    SizedBox(height: 4),
+                    const SizedBox(height: 4),
                     Text(
-                      'Chat with employers and candidates',
-                      style: TextStyle(
+                      _userData != null 
+                        ? 'Welcome ${_userData!['fullname']?.split(' ').first ?? 'User'}! You have ${_messages.where((m) => m['unread'] == true).length} unread'
+                        : 'Chat with employers and candidates',
+                      style: const TextStyle(
                         color: Colors.white70,
                         fontSize: 12,
                       ),
                     ),
                   ],
                 ),
-                Container(
-                  padding: const EdgeInsets.all(8),
-                  decoration: BoxDecoration(
-                    // FIXED: withOpacity -> withValues
-                    color: Colors.white.withValues(alpha: 0.2),
-                    shape: BoxShape.circle,
-                  ),
-                  child: const Icon(Icons.search, color: Colors.white, size: 20),
-                )
+                Row(
+                  children: [
+                    IconButton(
+                      icon: const Icon(Icons.bug_report, color: Colors.white, size: 20),
+                      onPressed: _printSessionDebug,
+                    ),
+                    Container(
+                      padding: const EdgeInsets.all(8),
+                      decoration: BoxDecoration(
+                        color: Colors.white.withValues(alpha: 0.2),
+                        shape: BoxShape.circle,
+                      ),
+                      child: const Icon(Icons.search, color: Colors.white, size: 20),
+                    ),
+                  ],
+                ),
               ],
             ),
           ),
@@ -116,7 +220,7 @@ class _MessagePageState extends State<MessagePage> {
               padding: const EdgeInsets.only(top: 8),
               itemCount: _messages.length,
               itemBuilder: (context, index) {
-                return _buildMessageItem(_messages[index]);
+                return _buildMessageItem(_messages[index], index);
               },
             ),
           ),
@@ -127,14 +231,17 @@ class _MessagePageState extends State<MessagePage> {
 
   String _getImagePath(int index) => 'img/$index.jpg';
 
-  Widget _buildMessageItem(Map<String, dynamic> message) {
+  Widget _buildMessageItem(Map<String, dynamic> message, int index) {
     return Container(
       margin: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
       child: Material(
         color: Colors.white,
         borderRadius: BorderRadius.circular(16),
         child: InkWell(
-          onTap: () => _openChat(context, message),
+          onTap: () {
+            _markConversationAsRead(index);
+            _openChat(context, message);
+          },
           borderRadius: BorderRadius.circular(16),
           child: Container(
             padding: const EdgeInsets.symmetric(vertical: 16),
@@ -151,7 +258,6 @@ class _MessagePageState extends State<MessagePage> {
                           shape: BoxShape.circle,
                           border: Border.all(
                             color: message['isEmployer']
-                                // FIXED: withOpacity -> withValues
                                 ? const Color(0xFFB30000).withValues(alpha: 0.3)
                                 : const Color(0xFF666666).withValues(alpha: 0.3),
                             width: 2.5,
@@ -265,6 +371,7 @@ class _MessagePageState extends State<MessagePage> {
           isEmployer: message['isEmployer'],
           jobTitle: message['jobTitle'],
           imageIndex: message['imageIndex'],
+          userData: _userData,
         ),
       ),
     );
@@ -276,6 +383,7 @@ class ChatDetailPage extends StatefulWidget {
   final bool isEmployer;
   final String jobTitle;
   final int imageIndex;
+  final Map<String, dynamic>? userData;
 
   const ChatDetailPage({
     super.key,
@@ -283,6 +391,7 @@ class ChatDetailPage extends StatefulWidget {
     required this.isEmployer,
     required this.jobTitle,
     required this.imageIndex,
+    this.userData,
   });
 
   @override
@@ -296,6 +405,26 @@ class _ChatDetailPageState extends State<ChatDetailPage> {
     {'text': 'I\'m available then. Does that work for you?', 'isMe': true, 'time': '10:37 AM'},
     {'text': 'Great! We reviewed your profile.', 'isMe': false, 'time': '10:30 AM'},
   ];
+
+  @override
+  void initState() {
+    super.initState();
+    _printChatSession();
+  }
+
+  void _printChatSession() {
+    print('\n========== CHAT DETAIL PAGE ==========');
+    print('Chatting with: ${widget.name}');
+    print('Job Title: ${widget.jobTitle}');
+    print('User Type: ${widget.isEmployer ? "Employer" : "Candidate"}');
+    if (widget.userData != null) {
+      print('Logged in as: ${widget.userData!['fullname']}');
+      print('User Email: ${widget.userData!['email']}');
+    } else {
+      print('No user session data available in chat');
+    }
+    print('=====================================\n');
+  }
 
   String _getImagePath(int index) => 'img/$index.jpg';
 
@@ -371,6 +500,26 @@ class _ChatDetailPageState extends State<ChatDetailPage> {
               ],
             ),
           ),
+          // Show user info banner if session exists
+          if (widget.userData != null)
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+              color: const Color(0xFFFFF5F5),
+              child: Row(
+                children: [
+                  const Icon(Icons.info_outline, size: 14, color: Color(0xFFB30000)),
+                  const SizedBox(width: 8),
+                  Expanded(
+                    child: Text(
+                      'Chatting as ${widget.userData!['fullname']} (${widget.userData!['email']})',
+                      style: const TextStyle(fontSize: 11, color: Color(0xFFB30000)),
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                  ),
+                ],
+              ),
+            ),
           Expanded(
             child: ListView.builder(
               padding: const EdgeInsets.all(16),
@@ -420,8 +569,15 @@ class _ChatDetailPageState extends State<ChatDetailPage> {
                 onPressed: () {
                   if (_messageController.text.isNotEmpty) {
                     setState(() {
-                      _chatMessages.insert(0, {'text': _messageController.text, 'isMe': true, 'time': 'Now'});
+                      _chatMessages.insert(0, {
+                        'text': _messageController.text, 
+                        'isMe': true, 
+                        'time': 'Now'
+                      });
                       _messageController.clear();
+                      
+                      // Print sent message with user info
+                      print('Message sent by ${widget.userData?['fullname'] ?? "User"}: ${_messageController.text}');
                     });
                   }
                 },

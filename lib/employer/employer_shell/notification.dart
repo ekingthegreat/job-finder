@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 class NotificationPage extends StatefulWidget {
   const NotificationPage({super.key});
@@ -8,6 +9,8 @@ class NotificationPage extends StatefulWidget {
 }
 
 class _NotificationPageState extends State<NotificationPage> {
+  Map<String, dynamic>? _userData;
+  
   // Added 'final' to satisfy linting
   final List<Map<String, dynamic>> _notifications = [
     {
@@ -103,6 +106,120 @@ class _NotificationPageState extends State<NotificationPage> {
   ];
 
   @override
+  void initState() {
+    super.initState();
+    _loadUserSession();
+  }
+
+  Future<void> _loadUserSession() async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      
+      final userId = prefs.getInt('user_id');
+      final fullname = prefs.getString('user_fullname');
+      final email = prefs.getString('user_email');
+      final username = prefs.getString('user_username');
+      final isVerified = prefs.getBool('is_verified') ?? false;
+      final isLoggedIn = prefs.getBool('is_logged_in');
+      
+      // Print session for debugging
+      print('\n========== NOTIFICATION PAGE - USER SESSION ==========');
+      print('Is Logged In: $isLoggedIn');
+      print('User ID: $userId');
+      print('Full Name: $fullname');
+      print('Username: $username');
+      print('Email: $email');
+      print('Is Verified: $isVerified');
+      print('Unread Notifications: ${_notifications.where((n) => !n['read']).length}');
+      print('======================================================\n');
+      
+      if (userId != null && fullname != null) {
+        setState(() {
+          _userData = {
+            'id': userId,
+            'fullname': fullname,
+            'email': email ?? '',
+            'username': username ?? '',
+            'is_verified': isVerified,
+          };
+        });
+      } else {
+        print('No user session found in NotificationPage');
+      }
+    } catch (e) {
+      print('Error loading user session in NotificationPage: $e');
+    }
+  }
+
+  void _printSessionDebug() async {
+    final prefs = await SharedPreferences.getInstance();
+    print('\n=== NOTIFICATION PAGE DEBUG: ALL SESSION DATA ===');
+    final keys = prefs.getKeys();
+    for (String key in keys) {
+      print('$key: ${prefs.get(key)}');
+    }
+    print('================================================\n');
+    
+    if (mounted) {
+      showDialog(
+        context: context,
+        builder: (context) => AlertDialog(
+          title: const Text('Session Information'),
+          content: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text('User: ${_userData?['fullname'] ?? 'Not logged in'}'),
+              Text('Email: ${_userData?['email'] ?? 'N/A'}'),
+              Text('Username: ${_userData?['username'] ?? 'N/A'}'),
+              Text('User ID: ${_userData?['id'] ?? 'N/A'}'),
+              Text('Verified: ${_userData?['is_verified'] == true ? 'Yes' : 'No'}'),
+              const Divider(),
+              Text('Total Notifications: ${_notifications.length}'),
+              Text('Unread: ${_notifications.where((n) => !n['read']).length}'),
+            ],
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(context),
+              child: const Text('Close'),
+            ),
+          ],
+        ),
+      );
+    }
+  }
+
+  void _markAllAsRead() {
+    setState(() {
+      for (var notification in _notifications) {
+        notification['read'] = true;
+      }
+    });
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(content: Text('All notifications marked as read'), backgroundColor: Colors.green),
+    );
+  }
+
+  void _clearAllNotifications() {
+    setState(() {
+      _notifications.clear();
+    });
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(content: Text('All notifications cleared'), backgroundColor: Colors.orange),
+    );
+  }
+
+  void _markAsRead(String id) {
+    setState(() {
+      final index = _notifications.indexWhere((n) => n['id'] == id);
+      if (index != -1) {
+        _notifications[index]['read'] = true;
+      }
+    });
+  }
+
+  @override
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: const Color(0xFFF5F5F5),
@@ -128,15 +245,17 @@ class _NotificationPageState extends State<NotificationPage> {
                 Expanded(
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
-                    children: const [
-                      Text(
+                    children: [
+                      const Text(
                         'Notifications',
                         style: TextStyle(color: Colors.white, fontSize: 22, fontWeight: FontWeight.w700),
                       ),
-                      SizedBox(height: 4),
+                      const SizedBox(height: 4),
                       Text(
-                        'Stay updated on opportunities',
-                        style: TextStyle(color: Colors.white70, fontSize: 12),
+                        _userData != null 
+                          ? 'Welcome ${_userData!['fullname']?.split(' ').first ?? 'User'}! You have ${_notifications.where((n) => !n['read']).length} updates'
+                          : 'Stay updated on opportunities',
+                        style: const TextStyle(color: Colors.white70, fontSize: 12),
                       ),
                     ],
                   ),
@@ -147,12 +266,31 @@ class _NotificationPageState extends State<NotificationPage> {
           ),
           _buildBulkActions(),
           Expanded(
-            child: ListView.separated(
-              padding: const EdgeInsets.all(16),
-              itemCount: _notifications.length,
-              separatorBuilder: (context, index) => const SizedBox(height: 12),
-              itemBuilder: (context, index) => _buildNotificationItem(_notifications[index]),
-            ),
+            child: _notifications.isEmpty
+                ? Center(
+                    child: Column(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        Icon(Icons.notifications_none, size: 80, color: Colors.grey[400]),
+                        const SizedBox(height: 16),
+                        Text(
+                          'No notifications',
+                          style: TextStyle(fontSize: 18, color: Colors.grey[600]),
+                        ),
+                        const SizedBox(height: 8),
+                        Text(
+                          'You\'re all caught up!',
+                          style: TextStyle(fontSize: 14, color: Colors.grey[500]),
+                        ),
+                      ],
+                    ),
+                  )
+                : ListView.separated(
+                    padding: const EdgeInsets.all(16),
+                    itemCount: _notifications.length,
+                    separatorBuilder: (context, index) => const SizedBox(height: 12),
+                    itemBuilder: (context, index) => _buildNotificationItem(_notifications[index]),
+                  ),
           ),
         ],
       ),
@@ -172,11 +310,11 @@ class _NotificationPageState extends State<NotificationPage> {
             ),
           ),
           TextButton(
-            onPressed: () {},
+            onPressed: _markAllAsRead,
             child: const Text('Read all', style: TextStyle(fontSize: 12, color: Color(0xFFB30000))),
           ),
           TextButton(
-            onPressed: () {},
+            onPressed: _clearAllNotifications,
             child: const Text('Clear', style: TextStyle(fontSize: 12, color: Color(0xFF666666))),
           ),
         ],
@@ -194,14 +332,24 @@ class _NotificationPageState extends State<NotificationPage> {
       borderRadius: BorderRadius.circular(16),
       elevation: 1,
       child: InkWell(
-        onTap: () {},
+        onTap: () {
+          if (!read) {
+            _markAsRead(notification['id']);
+            ScaffoldMessenger.of(context).showSnackBar(
+              SnackBar(
+                content: Text('"${notification['title']}" marked as read'),
+                backgroundColor: Colors.green,
+                duration: const Duration(seconds: 1),
+              ),
+            );
+          }
+        },
         borderRadius: BorderRadius.circular(16),
         child: Container(
           padding: const EdgeInsets.all(16),
           child: Row(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              // FIXED: withOpacity -> withValues
               Container(
                 width: 48,
                 height: 48,
@@ -257,7 +405,6 @@ class _NotificationPageState extends State<NotificationPage> {
                     Row(
                       mainAxisAlignment: MainAxisAlignment.spaceBetween,
                       children: [
-                        // FIXED: withOpacity -> withValues
                         Container(
                           padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
                           decoration: BoxDecoration(
@@ -270,9 +417,19 @@ class _NotificationPageState extends State<NotificationPage> {
                             style: TextStyle(fontSize: 10, color: color, fontWeight: FontWeight.bold),
                           ),
                         ),
-                        // FIXED: withOpacity -> withValues
                         GestureDetector(
-                          onTap: () {},
+                          onTap: () {
+                            if (!read) {
+                              _markAsRead(notification['id']);
+                              ScaffoldMessenger.of(context).showSnackBar(
+                                SnackBar(
+                                  content: Text('"${notification['title']}" marked as read'),
+                                  backgroundColor: Colors.green,
+                                  duration: const Duration(seconds: 1),
+                                ),
+                              );
+                            }
+                          },
                           child: Container(
                             padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
                             decoration: BoxDecoration(
@@ -308,7 +465,14 @@ class _NotificationPageState extends State<NotificationPage> {
     return Row(
       mainAxisSize: MainAxisSize.min,
       children: [
-        IconButton(icon: const Icon(Icons.done_all, color: Colors.white), onPressed: () {}),
+        IconButton(
+          icon: const Icon(Icons.bug_report, color: Colors.white), 
+          onPressed: _printSessionDebug,
+        ),
+        IconButton(
+          icon: const Icon(Icons.done_all, color: Colors.white), 
+          onPressed: _markAllAsRead,
+        ),
         _buildFilterButton(),
       ],
     );
@@ -317,7 +481,6 @@ class _NotificationPageState extends State<NotificationPage> {
   Widget _buildFilterButton() {
     return Container(
       padding: const EdgeInsets.all(8),
-      // FIXED: withOpacity -> withValues
       decoration: BoxDecoration(
         color: Colors.white.withValues(alpha: 0.2), 
         shape: BoxShape.circle

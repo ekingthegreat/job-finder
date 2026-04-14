@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 class PostJobPage extends StatefulWidget {
   const PostJobPage({super.key});
@@ -8,6 +9,8 @@ class PostJobPage extends StatefulWidget {
 }
 
 class _PostJobPageState extends State<PostJobPage> {
+  Map<String, dynamic>? _userData;
+  
   // CRUD: Local State for Jobs
   final List<Map<String, dynamic>> _myPostedJobs = [
     {
@@ -41,6 +44,92 @@ class _PostJobPageState extends State<PostJobPage> {
   final _descriptionController = TextEditingController();
   final _requirementsController = TextEditingController();
   String _selectedType = 'Full-time';
+
+  @override
+  void initState() {
+    super.initState();
+    _loadUserSession();
+  }
+
+  Future<void> _loadUserSession() async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      
+      final userId = prefs.getInt('user_id');
+      final fullname = prefs.getString('user_fullname');
+      final email = prefs.getString('user_email');
+      final username = prefs.getString('user_username');
+      final isVerified = prefs.getBool('is_verified') ?? false;
+      final isLoggedIn = prefs.getBool('is_logged_in');
+      
+      // Print session for debugging
+      print('\n========== POST JOB PAGE - USER SESSION ==========');
+      print('Is Logged In: $isLoggedIn');
+      print('User ID: $userId');
+      print('Full Name: $fullname');
+      print('Username: $username');
+      print('Email: $email');
+      print('Is Verified: $isVerified');
+      print('Active Jobs: ${_myPostedJobs.length}');
+      print('Total Applicants: ${_jobApplicants.values.fold(0, (sum, list) => sum + list.length)}');
+      print('==================================================\n');
+      
+      if (userId != null && fullname != null) {
+        setState(() {
+          _userData = {
+            'id': userId,
+            'fullname': fullname,
+            'email': email ?? '',
+            'username': username ?? '',
+            'is_verified': isVerified,
+          };
+        });
+      } else {
+        print('No user session found in PostJobPage');
+      }
+    } catch (e) {
+      print('Error loading user session in PostJobPage: $e');
+    }
+  }
+
+  void _printSessionDebug() async {
+    final prefs = await SharedPreferences.getInstance();
+    print('\n=== POST JOB PAGE DEBUG: ALL SESSION DATA ===');
+    final keys = prefs.getKeys();
+    for (String key in keys) {
+      print('$key: ${prefs.get(key)}');
+    }
+    print('=============================================\n');
+    
+    if (mounted) {
+      showDialog(
+        context: context,
+        builder: (context) => AlertDialog(
+          title: const Text('Session Information'),
+          content: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text('User: ${_userData?['fullname'] ?? 'Not logged in'}'),
+              Text('Email: ${_userData?['email'] ?? 'N/A'}'),
+              Text('Username: ${_userData?['username'] ?? 'N/A'}'),
+              Text('User ID: ${_userData?['id'] ?? 'N/A'}'),
+              Text('Verified: ${_userData?['is_verified'] == true ? 'Yes' : 'No'}'),
+              const Divider(),
+              Text('Active Jobs: ${_myPostedJobs.length}'),
+              Text('Total Applicants: ${_jobApplicants.values.fold(0, (sum, list) => sum + list.length)}'),
+            ],
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(context),
+              child: const Text('Close'),
+            ),
+          ],
+        ),
+      );
+    }
+  }
 
   // CREATE logic
   void _publishJob() {
@@ -137,18 +226,31 @@ class _PostJobPageState extends State<PostJobPage> {
                 ],
               ),
               padding: EdgeInsets.fromLTRB(20, MediaQuery.of(context).padding.top + 10, 20, 25),
-              child: const Row(
+              child: Row(
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
                   Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      Text('Employer Dashboard', style: TextStyle(color: Colors.white, fontSize: 22, fontWeight: FontWeight.bold)),
-                      SizedBox(height: 4),
-                      Text('Manage vacancies and hiring', style: TextStyle(color: Colors.white70, fontSize: 12)),
+                      const Text('Employer Dashboard', style: TextStyle(color: Colors.white, fontSize: 22, fontWeight: FontWeight.bold)),
+                      const SizedBox(height: 4),
+                      Text(
+                        _userData != null 
+                          ? 'Welcome ${_userData!['fullname']?.split(' ').first ?? 'Employer'}! Manage your jobs'
+                          : 'Manage vacancies and hiring',
+                        style: const TextStyle(color: Colors.white70, fontSize: 12),
+                      ),
                     ],
                   ),
-                  Icon(Icons.assignment_ind_rounded, color: Colors.white, size: 28),
+                  Row(
+                    children: [
+                      IconButton(
+                        icon: const Icon(Icons.bug_report, color: Colors.white, size: 20),
+                        onPressed: _printSessionDebug,
+                      ),
+                      const Icon(Icons.assignment_ind_rounded, color: Colors.white, size: 28),
+                    ],
+                  ),
                 ],
               ),
             ),
@@ -161,7 +263,6 @@ class _PostJobPageState extends State<PostJobPage> {
                   child: Text("Manage Listings", style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
                 ),
               ),
-              // FIXED: Removed unnecessary .toList()
               ..._myPostedJobs.map((job) => _buildJobManagementCard(job)),
             ],
             const SizedBox(height: 40),
@@ -206,7 +307,6 @@ class _PostJobPageState extends State<PostJobPage> {
             children: [
               Expanded(
                 child: DropdownButtonFormField<String>(
-                  // FIXED: Changed value to initialValue
                   initialValue: _selectedType,
                   items: ['Full-time', 'Part-time', 'Remote', 'Contract'].map((t) => DropdownMenuItem(value: t, child: Text(t))).toList(),
                   onChanged: (val) => setState(() => _selectedType = val!),
@@ -260,7 +360,6 @@ class _PostJobPageState extends State<PostJobPage> {
           if (applicants.isEmpty)
             const Padding(padding: EdgeInsets.all(20), child: Text("No applicants yet."))
           else
-            // FIXED: Removed unnecessary .toList()
             ...applicants.asMap().entries.map((entry) {
               int idx = entry.key;
               Map<String, String> user = entry.value;
