@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import 'applications.dart';
 import 'message.dart';
 import 'notification.dart';
@@ -20,6 +21,7 @@ class JobListingPage extends StatefulWidget {
 
 class _JobListingPageState extends State<JobListingPage> {
   int _selectedIndex = 0;
+  Map<String, dynamic>? _userData;
 
   final List<Widget> _pages = [
     const _JobListContent(),
@@ -36,6 +38,88 @@ class _JobListingPageState extends State<JobListingPage> {
     {'label': 'Notification', 'icon': Icons.notifications_outlined, 'activeIcon': Icons.notifications, 'badge': 2},
     {'label': 'Profile', 'icon': Icons.person_outline, 'activeIcon': Icons.person, 'badge': 0},
   ];
+
+  @override
+  void initState() {
+    super.initState();
+    _loadUserSession();
+  }
+
+  Future<void> _loadUserSession() async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      
+      final userId = prefs.getInt('user_id');
+      final fullname = prefs.getString('user_fullname');
+      final email = prefs.getString('user_email');
+      final username = prefs.getString('user_username');
+      final isVerified = prefs.getBool('is_verified') ?? false;
+      final isLoggedIn = prefs.getBool('is_logged_in');
+      
+      // Debug print session information
+      print('\n========== JOB LISTING PAGE - USER SESSION ==========');
+      print('Is Logged In: $isLoggedIn');
+      print('User ID: $userId');
+      print('Full Name: $fullname');
+      print('Username: $username');
+      print('Email: $email');
+      print('Is Verified: $isVerified');
+      print('=====================================================\n');
+      
+      if (userId != null && fullname != null) {
+        setState(() {
+          _userData = {
+            'id': userId,
+            'fullname': fullname,
+            'email': email ?? '',
+            'username': username ?? '',
+            'is_verified': isVerified,
+          };
+        });
+      } else {
+        print('No user session found in JobListingPage');
+      }
+    } catch (e) {
+      print('Error loading user session in JobListingPage: $e');
+    }
+  }
+
+  void _printSessionDebug() async {
+    final prefs = await SharedPreferences.getInstance();
+    print('\n=== JOB LISTING PAGE DEBUG: ALL SESSION DATA ===');
+    final keys = prefs.getKeys();
+    for (String key in keys) {
+      print('$key: ${prefs.get(key)}');
+    }
+    print('================================================\n');
+    
+    // Show dialog with session info
+    if (mounted) {
+      showDialog(
+        context: context,
+        builder: (context) => AlertDialog(
+          title: const Text('Session Information'),
+          content: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text('User: ${_userData?['fullname'] ?? 'Not logged in'}'),
+              Text('Email: ${_userData?['email'] ?? 'N/A'}'),
+              Text('Username: ${_userData?['username'] ?? 'N/A'}'),
+              Text('User ID: ${_userData?['id'] ?? 'N/A'}'),
+              Text('Verified: ${_userData?['is_verified'] == true ? 'Yes' : 'No'}'),
+            ],
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(context),
+              child: const Text('Close'),
+            ),
+          ],
+        ),
+      );
+    }
+  }
 
   void _onItemTapped(int index) {
     setState(() => _selectedIndex = index);
@@ -172,6 +256,11 @@ class _JobListContent extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    // Debug session from JobListContent
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      _checkUserSession(context);
+    });
+    
     return Column(
       children: [
         Container(
@@ -190,7 +279,13 @@ class _JobListContent extends StatelessWidget {
                   Text('Browse latest opportunities', style: TextStyle(color: Colors.white70, fontSize: 12)),
                 ],
               ),
-              CircleAvatar(backgroundColor: Colors.white24, child: const Icon(Icons.search, color: Colors.white)),
+              CircleAvatar(
+                backgroundColor: Colors.white24, 
+                child: IconButton(
+                  icon: const Icon(Icons.bug_report, color: Colors.white, size: 20),
+                  onPressed: () => _showSessionDebugDialog(context),
+                ),
+              ),
             ],
           ),
         ),
@@ -209,6 +304,63 @@ class _JobListContent extends StatelessWidget {
           ),
         ),
       ],
+    );
+  }
+
+  void _checkUserSession(BuildContext context) async {
+    final prefs = await SharedPreferences.getInstance();
+    
+    final userId = prefs.getInt('user_id');
+    final fullname = prefs.getString('user_fullname');
+    final email = prefs.getString('user_email');
+    final username = prefs.getString('user_username');
+    final isLoggedIn = prefs.getBool('is_logged_in');
+    final isVerified = prefs.getBool('is_verified');
+    
+    print('\n========== JOB LIST CONTENT - USER SESSION ==========');
+    print('Is Logged In: $isLoggedIn');
+    print('User ID: $userId');
+    print('Full Name: $fullname');
+    print('Username: $username');
+    print('Email: $email');
+    print('Is Verified: $isVerified');
+    print('=====================================================\n');
+  }
+
+  void _showSessionDebugDialog(BuildContext context) async {
+    final prefs = await SharedPreferences.getInstance();
+    
+    final userId = prefs.getInt('user_id');
+    final fullname = prefs.getString('user_fullname');
+    final email = prefs.getString('user_email');
+    final username = prefs.getString('user_username');
+    final isLoggedIn = prefs.getBool('is_logged_in');
+    final isVerified = prefs.getBool('is_verified');
+    
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Session Information'),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text('Logged In: ${isLoggedIn == true ? "Yes" : "No"}'),
+            const Divider(),
+            Text('User ID: ${userId ?? "N/A"}'),
+            Text('Full Name: ${fullname ?? "N/A"}'),
+            Text('Username: ${username ?? "N/A"}'),
+            Text('Email: ${email ?? "N/A"}'),
+            Text('Verified: ${isVerified == true ? "Yes" : "No"}'),
+          ],
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text('Close'),
+          ),
+        ],
+      ),
     );
   }
 

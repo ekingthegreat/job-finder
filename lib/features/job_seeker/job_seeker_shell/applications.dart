@@ -1,16 +1,124 @@
 import 'package:flutter/material.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
-class ApplicationsPage extends StatelessWidget {
+class ApplicationsPage extends StatefulWidget {
   const ApplicationsPage({super.key});
 
-  // Mock data representing the user's specific submission details
-  static const Map<String, dynamic> _mockSubmission = {
-    'resumeName': 'John_Doe_CV_2024.pdf',
-    'coverLetter': 'I am highly interested in this position because of my 5 years of experience with Flutter and Dart. I have built several high-performance apps and love the tech stack at your company.',
-    'submittedDate': 'Dec 10, 2023 at 2:30 PM',
-  };
+  @override
+  State<ApplicationsPage> createState() => _ApplicationsPageState();
+}
+
+class _ApplicationsPageState extends State<ApplicationsPage> {
+  Map<String, dynamic>? _userData;
+  bool _isLoading = true;
+
+  @override
+  void initState() {
+    super.initState();
+    _loadUserSession();
+  }
+
+  Future<void> _loadUserSession() async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      
+      // Load user data
+      final userId = prefs.getInt('user_id');
+      final fullname = prefs.getString('user_fullname');
+      final email = prefs.getString('user_email');
+      final username = prefs.getString('user_username');
+      final isLoggedIn = prefs.getBool('is_logged_in');
+      final isVerified = prefs.getBool('is_verified');
+      
+      // Print session information for debugging
+      print('\n========== APPLICATIONS PAGE - USER SESSION ==========');
+      print('Is Logged In: $isLoggedIn');
+      print('User ID: $userId');
+      print('Full Name: $fullname');
+      print('Username: $username');
+      print('Email: $email');
+      print('Is Verified: $isVerified');
+      print('=====================================================\n');
+      
+      if (userId != null && fullname != null) {
+        setState(() {
+          _userData = {
+            'id': userId,
+            'fullname': fullname,
+            'email': email ?? '',
+            'username': username ?? '',
+            'is_verified': isVerified,
+          };
+          _isLoading = false;
+        });
+      } else {
+        setState(() {
+          _isLoading = false;
+        });
+        print('WARNING: No user session found in ApplicationsPage');
+      }
+    } catch (e) {
+      print('Error loading user session in ApplicationsPage: $e');
+      setState(() {
+        _isLoading = false;
+      });
+    }
+  }
+
+  // Updated mock data to be dynamic based on user
+  Map<String, dynamic> _getMockSubmission() {
+    final userName = _userData?['fullname']?.split(' ').first ?? 'User';
+    final userEmail = _userData?['email'] ?? 'user@example.com';
+    
+    return {
+      'resumeName': '${userName}_CV_2024.pdf',
+      'coverLetter': 'I am highly interested in this position because of my 5 years of experience with Flutter and Dart. I have built several high-performance apps and love the tech stack at your company.\n\nContact: $userEmail',
+      'submittedDate': 'Dec 10, 2023 at 2:30 PM',
+    };
+  }
+
+  void _printSessionDebug() async {
+    final prefs = await SharedPreferences.getInstance();
+    print('\n=== DEBUG: ALL SESSION KEYS AND VALUES ===');
+    final keys = prefs.getKeys();
+    for (String key in keys) {
+      print('$key: ${prefs.get(key)}');
+    }
+    print('==========================================\n');
+    
+    // Show dialog with session info
+    if (mounted) {
+      showDialog(
+        context: context,
+        builder: (context) => AlertDialog(
+          title: const Text('Session Information'),
+          content: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text('User: ${_userData?['fullname'] ?? 'Not logged in'}'),
+              Text('Email: ${_userData?['email'] ?? 'N/A'}'),
+              Text('Username: ${_userData?['username'] ?? 'N/A'}'),
+              Text('User ID: ${_userData?['id'] ?? 'N/A'}'),
+              Text('Verified: ${_userData?['is_verified'] == true ? 'Yes' : 'No'}'),
+              const Divider(),
+              const Text('Total applications: 3', style: TextStyle(fontWeight: FontWeight.bold)),
+            ],
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(context),
+              child: const Text('Close'),
+            ),
+          ],
+        ),
+      );
+    }
+  }
 
   void _showApplicationDetails(BuildContext context, String jobTitle, String status) {
+    final mockSubmission = _getMockSubmission();
+    
     showModalBottomSheet(
       context: context,
       isScrollControlled: true,
@@ -48,6 +156,11 @@ class ApplicationsPage extends StatelessWidget {
                       Text(jobTitle, style: const TextStyle(fontSize: 20, fontWeight: FontWeight.bold)),
                       const SizedBox(height: 4),
                       Text('Status: $status', style: const TextStyle(color: Colors.grey)),
+                      if (_userData != null) ...[
+                        const SizedBox(height: 4),
+                        Text('Applicant: ${_userData!['fullname']}', 
+                          style: const TextStyle(fontSize: 12, color: Color(0xFFB30000))),
+                      ],
                     ],
                   ),
                 ),
@@ -70,7 +183,7 @@ class ApplicationsPage extends StatelessWidget {
                   const Icon(Icons.picture_as_pdf, color: Color(0xFFB30000)),
                   const SizedBox(width: 12),
                   Expanded(
-                    child: Text(_mockSubmission['resumeName'], style: const TextStyle(fontWeight: FontWeight.w500)),
+                    child: Text(mockSubmission['resumeName'], style: const TextStyle(fontWeight: FontWeight.w500)),
                   ),
                   const Icon(Icons.file_download_outlined, color: Colors.grey),
                 ],
@@ -88,12 +201,12 @@ class ApplicationsPage extends StatelessWidget {
                 borderRadius: BorderRadius.circular(12),
               ),
               child: Text(
-                _mockSubmission['coverLetter'],
+                mockSubmission['coverLetter'],
                 style: const TextStyle(height: 1.5, color: Colors.black87),
               ),
             ),
             const SizedBox(height: 25),
-            Text('Submitted on ${_mockSubmission['submittedDate']}', 
+            Text('Submitted on ${mockSubmission['submittedDate']}', 
               style: const TextStyle(color: Colors.grey, fontSize: 12)),
             const SizedBox(height: 10),
           ],
@@ -104,25 +217,41 @@ class ApplicationsPage extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    if (_isLoading) {
+      return const Scaffold(
+        backgroundColor: Color(0xFFF8F9FA),
+        body: Center(
+          child: CircularProgressIndicator(
+            color: Color(0xFFB30000),
+          ),
+        ),
+      );
+    }
+
     return Scaffold(
       backgroundColor: const Color(0xFFF8F9FA),
       body: Column(
         children: [
-          // Professional Header
+          // Professional Header with user info
           Container(
             width: double.infinity,
             decoration: const BoxDecoration(
               gradient: LinearGradient(colors: [Color(0xFFB30000), Color(0xFF8A0000)]),
             ),
             padding: EdgeInsets.fromLTRB(20, MediaQuery.of(context).padding.top + 10, 20, 25),
-            child: const Column(
+            child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text('My Applications', 
+                const Text('My Applications', 
                   style: TextStyle(color: Colors.white, fontSize: 24, fontWeight: FontWeight.bold)),
-                SizedBox(height: 4),
+                const SizedBox(height: 4),
                 Text('Real-time updates on your journey', 
                   style: TextStyle(color: Colors.white70, fontSize: 13)),
+                if (_userData != null) ...[
+                  const SizedBox(height: 8),
+                  Text('Welcome back, ${_userData!['fullname']}!', 
+                    style: const TextStyle(color: Colors.white, fontSize: 12)),
+                ],
               ],
             ),
           ),
@@ -131,6 +260,10 @@ class ApplicationsPage extends StatelessWidget {
             child: ListView(
               padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 20),
               children: [
+                // Debug button to print session
+                _buildDebugButton(),
+                const SizedBox(height: 10),
+                
                 _buildApplicationCard(
                   context,
                   jobTitle: 'Senior Flutter Developer',
@@ -163,6 +296,26 @@ class ApplicationsPage extends StatelessWidget {
     );
   }
 
+  Widget _buildDebugButton() {
+    return Container(
+      margin: const EdgeInsets.only(bottom: 8),
+      child: ElevatedButton.icon(
+        onPressed: _printSessionDebug,
+        icon: const Icon(Icons.bug_report, size: 18),
+        label: const Text('Debug Session Info'),
+        style: ElevatedButton.styleFrom(
+          backgroundColor: Colors.grey[200],
+          foregroundColor: const Color(0xFFB30000),
+          elevation: 0,
+          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(10),
+          ),
+        ),
+      ),
+    );
+  }
+
   Widget _buildApplicationCard(
     BuildContext context, {
     required String jobTitle,
@@ -178,7 +331,6 @@ class ApplicationsPage extends StatelessWidget {
         borderRadius: BorderRadius.circular(16),
         boxShadow: [
           BoxShadow(
-            // FIXED: withOpacity -> withValues
             color: Colors.black.withValues(alpha: 0.04), 
             blurRadius: 10, 
             offset: const Offset(0, 4)
@@ -240,7 +392,34 @@ class ApplicationsPage extends StatelessWidget {
                 ),
                 Expanded(
                   child: TextButton(
-                    onPressed: () {},
+                    onPressed: () {
+                      // Show cancellation dialog with user info
+                      showDialog(
+                        context: context,
+                        builder: (context) => AlertDialog(
+                          title: const Text('Cancel Application'),
+                          content: Text('Are you sure you want to cancel your application for $jobTitle?\n\n${_userData != null ? 'Applicant: ${_userData!['fullname']}' : ''}'),
+                          actions: [
+                            TextButton(
+                              onPressed: () => Navigator.pop(context),
+                              child: const Text('No'),
+                            ),
+                            TextButton(
+                              onPressed: () {
+                                Navigator.pop(context);
+                                ScaffoldMessenger.of(context).showSnackBar(
+                                  const SnackBar(
+                                    content: Text('Application cancelled'),
+                                    backgroundColor: Colors.orange,
+                                  ),
+                                );
+                              },
+                              child: const Text('Yes, Cancel'),
+                            ),
+                          ],
+                        ),
+                      );
+                    },
                     child: const Text('Cancel', style: TextStyle(color: Colors.grey)),
                   ),
                 ),
@@ -256,7 +435,6 @@ class ApplicationsPage extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
       decoration: BoxDecoration(
-        // FIXED: withOpacity -> withValues
         color: color.withValues(alpha: 0.1),
         borderRadius: BorderRadius.circular(8),
       ),

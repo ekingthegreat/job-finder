@@ -35,7 +35,7 @@ class _LoginPageState extends State<LoginPage> {
       }
     } catch (e) {
       // Fallback URL if platform detection fails
-      print('Platform detection error: $e');
+     // print('Platform detection error: $e');
       return 'http://localhost/enricoso/api/login.php';
     }
   }
@@ -80,7 +80,7 @@ class _LoginPageState extends State<LoginPage> {
     try {
       // Get the URL using the same method as registration
       final String apiUrl = await _getApiUrl();
-      print('Attempting to connect to: $apiUrl');
+     // print('Attempting to connect to: $apiUrl');
       
       final response = await http.post(
         Uri.parse(apiUrl),
@@ -91,8 +91,8 @@ class _LoginPageState extends State<LoginPage> {
         }),
       ).timeout(const Duration(seconds: 30));
 
-      print('Response status code: ${response.statusCode}');
-      print('Response body: ${response.body}');
+    //  print('Response status code: ${response.statusCode}');
+    //  print('Response body: ${response.body}');
 
       if (!mounted) return;
 
@@ -120,7 +120,7 @@ class _LoginPageState extends State<LoginPage> {
       }
     } catch (e) {
       if (!mounted) return;
-      print('Login error details: $e');
+    //  print('Login error details: $e');
       _showSnackBar('Connection error. Please check your internet connection.', isError: true);
     } finally {
       if (mounted) {

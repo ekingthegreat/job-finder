@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 class MessagePage extends StatefulWidget {
   const MessagePage({super.key});
@@ -8,6 +9,9 @@ class MessagePage extends StatefulWidget {
 }
 
 class _MessagePageState extends State<MessagePage> {
+  Map<String, dynamic>? _userData;
+  bool _isLoading = true;
+  
   final List<Map<String, dynamic>> _messages = [
     {
       'name': 'Tech Innovators Inc.',
@@ -75,7 +79,112 @@ class _MessagePageState extends State<MessagePage> {
   ];
 
   @override
+  void initState() {
+    super.initState();
+    _loadUserSession();
+  }
+
+  Future<void> _loadUserSession() async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      
+      // Load user data
+      final userId = prefs.getInt('user_id');
+      final fullname = prefs.getString('user_fullname');
+      final email = prefs.getString('user_email');
+      final username = prefs.getString('user_username');
+      final isLoggedIn = prefs.getBool('is_logged_in');
+      final isVerified = prefs.getBool('is_verified');
+      
+      // Print session information for debugging
+      print('\n========== MESSAGE PAGE - USER SESSION ==========');
+      print('Is Logged In: $isLoggedIn');
+      print('User ID: $userId');
+      print('Full Name: $fullname');
+      print('Username: $username');
+      print('Email: $email');
+      print('Is Verified: $isVerified');
+      print('Total Conversations: ${_messages.length}');
+      print('================================================\n');
+      
+      if (userId != null && fullname != null) {
+        setState(() {
+          _userData = {
+            'id': userId,
+            'fullname': fullname,
+            'email': email ?? '',
+            'username': username ?? '',
+            'is_verified': isVerified,
+          };
+          _isLoading = false;
+        });
+      } else {
+        setState(() {
+          _isLoading = false;
+        });
+        print('WARNING: No user session found in MessagePage');
+      }
+    } catch (e) {
+      print('Error loading user session in MessagePage: $e');
+      setState(() {
+        _isLoading = false;
+      });
+    }
+  }
+
+  void _printSessionDebug() async {
+    final prefs = await SharedPreferences.getInstance();
+    print('\n=== MESSAGE PAGE DEBUG: ALL SESSION KEYS AND VALUES ===');
+    final keys = prefs.getKeys();
+    for (String key in keys) {
+      print('$key: ${prefs.get(key)}');
+    }
+    print('=====================================================\n');
+    
+    // Show dialog with session info
+    if (mounted) {
+      showDialog(
+        context: context,
+        builder: (context) => AlertDialog(
+          title: const Text('Session Information'),
+          content: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text('User: ${_userData?['fullname'] ?? 'Not logged in'}'),
+              Text('Email: ${_userData?['email'] ?? 'N/A'}'),
+              Text('Username: ${_userData?['username'] ?? 'N/A'}'),
+              Text('User ID: ${_userData?['id'] ?? 'N/A'}'),
+              Text('Verified: ${_userData?['is_verified'] == true ? 'Yes' : 'No'}'),
+              const Divider(),
+              Text('Total conversations: ${_messages.length}'),
+              Text('Unread messages: ${_messages.where((m) => m['unread'] == true).length}'),
+            ],
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(context),
+              child: const Text('Close'),
+            ),
+          ],
+        ),
+      );
+    }
+  }
+
+  @override
   Widget build(BuildContext context) {
+    if (_isLoading) {
+      return const Scaffold(
+        backgroundColor: Color(0xFFF5F5F5),
+        body: Center(
+          child: CircularProgressIndicator(
+            color: Color(0xFFB30000),
+          ),
+        ),
+      );
+    }
+
     return Scaffold(
       backgroundColor: const Color(0xFFF5F5F5),
       body: Column(
@@ -105,10 +214,10 @@ class _MessagePageState extends State<MessagePage> {
             child: Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
-                const Column(
+                Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Text(
+                    const Text(
                       'Messages',
                       style: TextStyle(
                         color: Colors.white,
@@ -116,25 +225,38 @@ class _MessagePageState extends State<MessagePage> {
                         fontWeight: FontWeight.w700,
                       ),
                     ),
-                    SizedBox(height: 4),
+                    const SizedBox(height: 4),
                     Text(
-                      'Chat with employers and candidates',
-                      style: TextStyle(
+                      _userData != null 
+                        ? 'Welcome ${_userData!['fullname']?.split(' ').first ?? 'User'}! You have ${_messages.where((m) => m['unread'] == true).length} unread messages'
+                        : 'Chat with employers and candidates',
+                      style: const TextStyle(
                         color: Colors.white70,
                         fontSize: 12,
                       ),
                     ),
                   ],
                 ),
-                Container(
-                  padding: const EdgeInsets.all(8),
-                  decoration: BoxDecoration(
-                    // FIXED: withOpacity -> withValues
-                    color: Colors.white.withValues(alpha: 0.2),
-                    shape: BoxShape.circle,
-                  ),
-                  child: const Icon(Icons.search, color: Colors.white, size: 20),
-                )
+                Row(
+                  children: [
+                    // Debug button
+                    Container(
+                      margin: const EdgeInsets.only(right: 8),
+                      child: IconButton(
+                        icon: const Icon(Icons.bug_report, color: Colors.white, size: 20),
+                        onPressed: _printSessionDebug,
+                      ),
+                    ),
+                    Container(
+                      padding: const EdgeInsets.all(8),
+                      decoration: BoxDecoration(
+                        color: Colors.white.withValues(alpha: 0.2),
+                        shape: BoxShape.circle,
+                      ),
+                      child: const Icon(Icons.search, color: Colors.white, size: 20),
+                    ),
+                  ],
+                ),
               ],
             ),
           ),
@@ -185,14 +307,12 @@ class _MessagePageState extends State<MessagePage> {
                           shape: BoxShape.circle,
                           border: Border.all(
                             color: message['isEmployer']
-                                // FIXED: withOpacity -> withValues
                                 ? const Color(0xFFB30000).withValues(alpha: 0.3)
                                 : const Color(0xFF666666).withValues(alpha: 0.3),
                             width: 2.5,
                           ),
                           boxShadow: [
                             BoxShadow(
-                              // FIXED: withOpacity -> withValues
                               color: Colors.black.withValues(alpha: 0.1),
                               blurRadius: 8,
                               offset: const Offset(0, 3),
@@ -316,7 +436,6 @@ class _MessagePageState extends State<MessagePage> {
                                 borderRadius: BorderRadius.circular(12),
                                 border: Border.all(
                                   color: message['isEmployer']
-                                      // FIXED: withOpacity -> withValues
                                       ? const Color(0xFFB30000).withValues(alpha: 0.3)
                                       : const Color(0xFF666666).withValues(alpha: 0.3),
                                   width: 1,
@@ -356,6 +475,7 @@ class _MessagePageState extends State<MessagePage> {
           isEmployer: message['isEmployer'],
           jobTitle: message['jobTitle'],
           imageIndex: message['imageIndex'],
+          userData: _userData, // Pass user data to chat
         ),
       ),
     );
@@ -367,6 +487,7 @@ class ChatDetailPage extends StatefulWidget {
   final bool isEmployer;
   final String jobTitle;
   final int imageIndex;
+  final Map<String, dynamic>? userData;
 
   const ChatDetailPage({
     super.key,
@@ -374,6 +495,7 @@ class ChatDetailPage extends StatefulWidget {
     required this.isEmployer,
     required this.jobTitle,
     required this.imageIndex,
+    this.userData,
   });
 
   @override
@@ -382,33 +504,63 @@ class ChatDetailPage extends StatefulWidget {
 
 class _ChatDetailPageState extends State<ChatDetailPage> {
   final TextEditingController _messageController = TextEditingController();
-  final List<Map<String, dynamic>> _chatMessages = [
-    {
-      'text': 'Hi! We reviewed your application for the Flutter Developer position.',
-      'isMe': false,
-      'time': '10:30 AM',
-    },
-    {
-      'text': 'Thank you! I\'m really interested in this opportunity.',
-      'isMe': true,
-      'time': '10:32 AM',
-    },
-    {
-      'text': 'Great! When would you be available for a technical interview?',
-      'isMe': false,
-      'time': '10:35 AM',
-    },
-    {
-      'text': 'I\'m available any weekday next week. What works for you?',
-      'isMe': true,
-      'time': '10:37 AM',
-    },
-    {
-      'text': 'How about Tuesday 2:00 PM? We can do it via Google Meet.',
-      'isMe': false,
-      'time': '10:40 AM',
-    },
-  ];
+  List<Map<String, dynamic>> _chatMessages = [];
+
+  @override
+  void initState() {
+    super.initState();
+    _initializeChatMessages();
+    _printChatSession();
+  }
+
+  void _initializeChatMessages() {
+    // Show user info in chat if available
+    final userPrefix = widget.userData != null 
+        ? 'Hi! This is ${widget.userData!['fullname']}. ' 
+        : '';
+    
+    _chatMessages = [
+      {
+        'text': '${userPrefix}Hi! We reviewed your application for the ${widget.jobTitle} position.',
+        'isMe': false,
+        'time': '10:30 AM',
+      },
+      {
+        'text': 'Thank you! I\'m really interested in this opportunity.',
+        'isMe': true,
+        'time': '10:32 AM',
+      },
+      {
+        'text': 'Great! When would you be available for a technical interview?',
+        'isMe': false,
+        'time': '10:35 AM',
+      },
+      {
+        'text': 'I\'m available any weekday next week. What works for you?',
+        'isMe': true,
+        'time': '10:37 AM',
+      },
+      {
+        'text': 'How about Tuesday 2:00 PM? We can do it via Google Meet.',
+        'isMe': false,
+        'time': '10:40 AM',
+      },
+    ];
+  }
+
+  void _printChatSession() {
+    print('\n========== CHAT DETAIL PAGE ==========');
+    print('Chatting with: ${widget.name}');
+    print('Job Title: ${widget.jobTitle}');
+    print('User Type: ${widget.isEmployer ? "Employer" : "Candidate"}');
+    if (widget.userData != null) {
+      print('Logged in as: ${widget.userData!['fullname']}');
+      print('User Email: ${widget.userData!['email']}');
+    } else {
+      print('No user session data available in chat');
+    }
+    print('=====================================\n');
+  }
 
   String _getImagePath(int index) {
     return 'img/$index.jpg';
@@ -450,7 +602,6 @@ class _ChatDetailPageState extends State<ChatDetailPage> {
                     Container(
                       margin: const EdgeInsets.only(right: 12),
                       decoration: BoxDecoration(
-                        // FIXED: withOpacity -> withValues
                         color: Colors.white.withValues(alpha: 0.2),
                         shape: BoxShape.circle,
                       ),
@@ -467,7 +618,6 @@ class _ChatDetailPageState extends State<ChatDetailPage> {
                           decoration: BoxDecoration(
                             shape: BoxShape.circle,
                             border: Border.all(
-                              // FIXED: withOpacity -> withValues
                               color: Colors.white.withValues(alpha: 0.5),
                               width: 2,
                             ),
@@ -518,12 +668,11 @@ class _ChatDetailPageState extends State<ChatDetailPage> {
                 Container(
                   padding: const EdgeInsets.all(8),
                   decoration: BoxDecoration(
-                    // FIXED: withOpacity -> withValues
                     color: Colors.white.withValues(alpha: 0.2),
                     shape: BoxShape.circle,
                   ),
-                  child: const Icon(Icons.search, color: Colors.white, size: 20),
-                )
+                  child: const Icon(Icons.more_vert, color: Colors.white, size: 20),
+                ),
               ],
             ),
           ),
@@ -538,7 +687,6 @@ class _ChatDetailPageState extends State<ChatDetailPage> {
                   color: const Color(0xFFFFF5F5),
                   borderRadius: BorderRadius.circular(20),
                   border: Border.all(
-                    // FIXED: withOpacity -> withValues
                     color: const Color(0xFFB30000).withValues(alpha: 0.3),
                     width: 1.5,
                   ),
@@ -556,6 +704,25 @@ class _ChatDetailPageState extends State<ChatDetailPage> {
                         fontWeight: FontWeight.w600,
                       ),
                     ),
+                    if (widget.userData != null) ...[
+                      const SizedBox(width: 8),
+                      Container(
+                        width: 4,
+                        height: 4,
+                        decoration: const BoxDecoration(
+                          color: Color(0xFFB30000),
+                          shape: BoxShape.circle,
+                        ),
+                      ),
+                      const SizedBox(width: 8),
+                      Text(
+                        widget.userData!['username'] ?? '',
+                        style: const TextStyle(
+                          fontSize: 12,
+                          color: Color(0xFF666666),
+                        ),
+                      ),
+                    ],
                   ],
                 ),
               ),
@@ -620,6 +787,9 @@ class _ChatDetailPageState extends State<ChatDetailPage> {
                             },
                           );
                           _messageController.clear();
+                          
+                          // Print sent message with user info
+                          print('Message sent by ${widget.userData?['fullname'] ?? "User"}: ${_messageController.text}');
                         });
                       }
                     },
@@ -648,7 +818,6 @@ class _ChatDetailPageState extends State<ChatDetailPage> {
               decoration: BoxDecoration(
                 shape: BoxShape.circle,
                 border: Border.all(
-                  // FIXED: withOpacity -> withValues
                   color: const Color(0xFFB30000).withValues(alpha: 0.3),
                   width: 1.5,
                 ),
@@ -695,7 +864,6 @@ class _ChatDetailPageState extends State<ChatDetailPage> {
                     ),
                     boxShadow: [
                       BoxShadow(
-                        // FIXED: withOpacity -> withValues
                         color: Colors.black.withValues(alpha: 0.08),
                         blurRadius: 6,
                         offset: const Offset(0, 3),
