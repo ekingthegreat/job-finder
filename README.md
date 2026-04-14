@@ -1,16 +1,29 @@
-# enricoso
+# 💼 Job Finder Mobile Application
 
-A new Flutter project.
+A simple and responsive **Job Finder Mobile Application** built using Flutter for the frontend and PHP with MySQL for the backend.
+This app allows users to browse job listings, view job details, and apply for jobs directly from their mobile devices.
+---
 
-## Getting Started
+## 🚀 Features
 
-This project is a starting point for a Flutter application.
+- 👤 User Registration and Login system
+- 🔎 Browse and search job listings
+- 📄 View detailed job descriptions
+- 📝 Apply for jobs online
+- 🗂 Admin panel for managing job posts
+- 💾 MySQL database integration
 
-A few resources to get you started if this is your first Flutter project:
+---
 
-- [Lab: Write your first Flutter app](https://docs.flutter.dev/get-started/codelab)
-- [Cookbook: Useful Flutter samples](https://docs.flutter.dev/cookbook)
+## 🛠️ Tech Stack
 
-For help getting started with Flutter development, view the
-[online documentation](https://docs.flutter.dev/), which offers tutorials,
-samples, guidance on mobile development, and a full API reference.
+- Frontend: HTML, CSS, JavaScript, Bootstrap
+- Backend: PHP
+- Database: MySQL
+- Server: Apache (XAMPP / WAMP / LAMP)
+
+---
+
+## 👨‍💻 Author
+
+Michael Martinez
