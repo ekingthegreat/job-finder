@@ -1,7 +1,8 @@
 import 'package:flutter/material.dart';
-// 1. Updated import to point to the new auth folder
-import 'package:enricoso/auth/login.dart'; 
-//import 'package:http/http.dart' as http; 
+import 'package:enricoso/features/job_seeker/job_seeker_shell/joblisting.dart';
+import 'package:enricoso/auth/login.dart';
+import 'package:enricoso/auth/registration.dart';
+
 void main() {
   runApp(const MyApp());
 }
@@ -12,30 +13,25 @@ class MyApp extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
-      debugShowCheckedModeBanner: false, // Optional: hides the debug banner
-      title: 'Job Seeker App',
+      debugShowCheckedModeBanner: false,
+      title: 'Enricoso Job Finder',
       theme: ThemeData(
-        primaryColor: const Color(0xFFB30000),
-        primaryColorDark: const Color(0xFF8A0000),
-        scaffoldBackgroundColor: const Color(0xFFF5F5F5),
-        useMaterial3: true,
-        appBarTheme: const AppBarTheme(
-          backgroundColor: Color(0xFFB30000),
-          elevation: 0,
-        ),
-        elevatedButtonTheme: ElevatedButtonThemeData(
-          style: ElevatedButton.styleFrom(
-            backgroundColor: const Color(0xFFB30000),
-            foregroundColor: Colors.white,
-            shape: RoundedRectangleBorder(
-              borderRadius: BorderRadius.circular(10),
-            ),
-            padding: const EdgeInsets.symmetric(vertical: 16, horizontal: 32),
-          ),
-        ),
+        primarySwatch: Colors.red,
+        visualDensity: VisualDensity.adaptivePlatformDensity,
       ),
-      // 2. Changed home from JobListingPage to LoginPage
-      home: const LoginPage(), 
+      // Define your routes
+      initialRoute: '/login',
+      routes: {
+        '/login': (context) => const LoginPage(),
+        '/register': (context) => const RegistrationPage(),
+        '/jobs': (context) => const JobListingPage(),
+      },
+      // Fallback for any undefined routes
+      onUnknownRoute: (settings) {
+        return MaterialPageRoute(
+          builder: (context) => const LoginPage(),
+        );
+      },
     );
   }
 }

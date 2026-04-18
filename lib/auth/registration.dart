@@ -4,6 +4,8 @@ import 'dart:convert';
 import 'dart:developer' as developer;
 import 'package:image_picker/image_picker.dart';
 import 'dart:io';
+import 'package:shared_preferences/shared_preferences.dart';
+import '../../features/job_seeker/job_seeker_shell/joblisting.dart';
 import 'package:enricoso/auth/login.dart';
 
 class RegistrationPage extends StatefulWidget {
@@ -293,13 +295,30 @@ class _RegistrationPageState extends State<RegistrationPage> {
 
     if (!mounted) return;
 
-    if (jsonResponse['status'] == 'success') {
-      _showSuccessSnackBar(jsonResponse['message']);
-      Navigator.pushReplacement(
-        context,
-        MaterialPageRoute(builder: (context) => const LoginPage()),
-      );
-    } else {
+    // Locate the success block inside _submitRegistration
+if (jsonResponse['status'] == 'success') {
+  // 1. Get the data from the response
+  final userData = jsonResponse['data'];
+  
+  // 2. Save to SharedPreferences
+  final prefs = await SharedPreferences.getInstance();
+  await prefs.setInt('user_id', userData['user_id']);
+  await prefs.setString('user_fullname', userData['fullname'] ?? _nameController.text);
+  await prefs.setString('user_username', userData['username']);
+  await prefs.setString('user_email', userData['email'] ?? _emailController.text);
+  await prefs.setBool('is_logged_in', true);
+  await prefs.setBool('is_verified', false); // New users usually start unverified
+
+  _showSuccessSnackBar(jsonResponse['message']);
+
+  // 3. Redirect to JobListingPage
+  if (!mounted) return;
+  Navigator.pushAndRemoveUntil(
+    context,
+    MaterialPageRoute(builder: (context) => const JobListingPage()),
+    (route) => false, // This clears the navigation history
+  );
+} else {
       _showErrorSnackBar(jsonResponse['message'] ?? 'Registration failed');
     }
   } catch (e) {
