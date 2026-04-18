@@ -1,4 +1,7 @@
+import 'dart:io';
 import 'package:flutter/material.dart';
+import 'package:http/http.dart' as http;
+import 'dart:convert';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'applications.dart';
 import 'message.dart';
@@ -32,12 +35,12 @@ class _JobListingPageState extends State<JobListingPage> {
   ];
 
   static final List<Map<String, dynamic>> _bottomNavItems = [
-    {'label': 'Jobs', 'icon': Icons.work_outline, 'activeIcon': Icons.work, 'badge': 0},
-    {'label': 'Apps', 'icon': Icons.description_outlined, 'activeIcon': Icons.description, 'badge': 3},
-    {'label': 'Chat', 'icon': Icons.chat_bubble_outline, 'activeIcon': Icons.chat_bubble, 'badge': 5},
-    {'label': 'Notification', 'icon': Icons.notifications_outlined, 'activeIcon': Icons.notifications, 'badge': 2},
-    {'label': 'Profile', 'icon': Icons.person_outline, 'activeIcon': Icons.person, 'badge': 0},
-  ];
+  {'label': 'Jobs', 'icon': Icons.work_outline, 'activeIcon': Icons.work, 'badge': 0},
+  {'label': 'Apps', 'icon': Icons.description_outlined, 'activeIcon': Icons.description, 'badge': 3},
+  {'label': 'Chat', 'icon': Icons.chat_bubble_outline, 'activeIcon': Icons.chat_bubble, 'badge': 5},
+  {'label': 'Notification', 'icon': Icons.notifications_outlined, 'activeIcon': Icons.notifications, 'badge': 2},
+  {'label': 'Profile', 'icon': Icons.person_outline, 'activeIcon': Icons.person, 'badge': 0},
+];
 
   @override
   void initState() {
@@ -56,7 +59,6 @@ class _JobListingPageState extends State<JobListingPage> {
       final isVerified = prefs.getBool('is_verified') ?? false;
       final isLoggedIn = prefs.getBool('is_logged_in');
       
-      // Debug print session information
       print('\n========== JOB LISTING PAGE - USER SESSION ==========');
       print('Is Logged In: $isLoggedIn');
       print('User ID: $userId');
@@ -81,43 +83,6 @@ class _JobListingPageState extends State<JobListingPage> {
       }
     } catch (e) {
       print('Error loading user session in JobListingPage: $e');
-    }
-  }
-
-  void _printSessionDebug() async {
-    final prefs = await SharedPreferences.getInstance();
-    print('\n=== JOB LISTING PAGE DEBUG: ALL SESSION DATA ===');
-    final keys = prefs.getKeys();
-    for (String key in keys) {
-      print('$key: ${prefs.get(key)}');
-    }
-    print('================================================\n');
-    
-    // Show dialog with session info
-    if (mounted) {
-      showDialog(
-        context: context,
-        builder: (context) => AlertDialog(
-          title: const Text('Session Information'),
-          content: Column(
-            mainAxisSize: MainAxisSize.min,
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text('User: ${_userData?['fullname'] ?? 'Not logged in'}'),
-              Text('Email: ${_userData?['email'] ?? 'N/A'}'),
-              Text('Username: ${_userData?['username'] ?? 'N/A'}'),
-              Text('User ID: ${_userData?['id'] ?? 'N/A'}'),
-              Text('Verified: ${_userData?['is_verified'] == true ? 'Yes' : 'No'}'),
-            ],
-          ),
-          actions: [
-            TextButton(
-              onPressed: () => Navigator.pop(context),
-              child: const Text('Close'),
-            ),
-          ],
-        ),
-      );
     }
   }
 
@@ -170,7 +135,6 @@ class _JobListingPageState extends State<JobListingPage> {
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            // Container with fixed width ensures the background highlight and badge stay near the icon
             Container(
               width: isSmall ? 50 : 60,
               padding: const EdgeInsets.symmetric(vertical: 6),
@@ -228,143 +192,318 @@ class _JobListingPageState extends State<JobListingPage> {
   }
 }
 
-class _JobListContent extends StatelessWidget {
+class _JobListContent extends StatefulWidget {
   const _JobListContent();
 
-  final List<Map<String, dynamic>> _jobs = const [
-    {
-      'title': 'Senior Flutter Developer',
-      'company': 'Tech Innovators Inc.',
-      'location': 'Remote',
-      'salary': '\$120k-\$150k',
-      'type': 'Full-time',
-      'posted': '2 days ago',
-      'description': 'Experienced Flutter developer for mobile applications.',
-      'requirements': '5+ years mobile, 3+ years Flutter, Firebase, REST APIs'
-    },
-    {
-      'title': 'UI/UX Designer',
-      'company': 'Creative Solutions',
-      'location': 'San Francisco, CA',
-      'salary': '\$90k-\$120k',
-      'type': 'Full-time',
-      'posted': '1 week ago',
-      'description': 'Create amazing user experiences for web/mobile apps.',
-      'requirements': 'Portfolio required, 3+ years design, Figma/Adobe XD'
-    },
-  ];
+  @override
+  State<_JobListContent> createState() => _JobListContentState();
+}
+
+class _JobListContentState extends State<_JobListContent> {
+  List<Map<String, dynamic>> _jobs = [];
+  bool _isLoading = true;
+  String _errorMessage = '';
 
   @override
-  Widget build(BuildContext context) {
-    // Debug session from JobListContent
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      _checkUserSession(context);
+  void initState() {
+    super.initState();
+    _fetchJobs();
+  }
+
+  Future<String> _getApiUrl() async {
+    try {
+      if (Platform.isAndroid) {
+        return 'http://10.0.2.2/enricoso/api/get_jobs.php';
+      }
+    } catch (e) {
+      print('Platform detection error: $e');
+    }
+    return 'http://localhost/enricoso/api/get_jobs.php';
+  }
+
+  Future<void> _fetchJobs() async {
+    setState(() {
+      _isLoading = true;
+      _errorMessage = '';
     });
+
+    try {
+      final apiUrl = await _getApiUrl();
+      print('Fetching jobs from: $apiUrl');
+      
+      final response = await http.get(Uri.parse(apiUrl));
+      
+      print('Response status: ${response.statusCode}');
+      print('Response body: ${response.body}');
+      
+      if (response.statusCode == 200) {
+        final data = json.decode(response.body);
+        
+        if (data['status'] == 'success') {
+          setState(() {
+            _jobs = List<Map<String, dynamic>>.from(data['data']['jobs']);
+            _isLoading = false;
+          });
+          print('Loaded ${_jobs.length} jobs');
+        } else {
+          setState(() {
+            _errorMessage = data['message'] ?? 'Failed to load jobs';
+            _isLoading = false;
+          });
+        }
+      } else {
+        setState(() {
+          _errorMessage = 'Server error: ${response.statusCode}';
+          _isLoading = false;
+        });
+      }
+    } catch (e) {
+      print('Error fetching jobs: $e');
+      setState(() {
+        _errorMessage = 'Connection error: $e';
+        _isLoading = false;
+      });
+    }
+  }
+
+  Future<void> _applyForJob(Map<String, dynamic> job) async {
+    print('Apply button clicked for job: ${job['title']}');
     
-    return Column(
-      children: [
-        Container(
-          width: double.infinity,
-          decoration: const BoxDecoration(
-            gradient: LinearGradient(colors: [Color(0xFFB30000), Color(0xFF8A0000)]),
-          ),
-          padding: EdgeInsets.fromLTRB(20, MediaQuery.of(context).padding.top + 10, 20, 20),
-          child: Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: [
-              const Column(
+    final prefs = await SharedPreferences.getInstance();
+    final userId = prefs.getInt('user_id');
+    final userFullname = prefs.getString('user_fullname');
+    final userEmail = prefs.getString('user_email');
+    
+    print('User ID: $userId');
+    print('User Fullname: $userFullname');
+    print('User Email: $userEmail');
+    
+    if (userId == null) {
+      _showError('Please login to apply for jobs');
+      return;
+    }
+    
+    _showApplyModal(context, job, userId, userFullname, userEmail);
+  }
+
+  void _showApplyModal(BuildContext context, Map<String, dynamic> job, int userId, String? userFullname, String? userEmail) {
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (BuildContext context) {
+        return StatefulBuilder(
+          builder: (BuildContext context, StateSetter setModalState) {
+            String coverLetter = '';
+            bool isSubmitting = false;
+            
+            return Container(
+              decoration: const BoxDecoration(
+                color: Colors.white,
+                borderRadius: BorderRadius.vertical(top: Radius.circular(25)),
+              ),
+              padding: EdgeInsets.only(
+                left: 24,
+                right: 24,
+                top: 15,
+                bottom: MediaQuery.of(context).viewInsets.bottom + 24,
+              ),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Text('Find Your Dream Job', style: TextStyle(color: Colors.white, fontSize: 22, fontWeight: FontWeight.bold)),
-                  Text('Browse latest opportunities', style: TextStyle(color: Colors.white70, fontSize: 12)),
+                  Center(
+                    child: Container(
+                      width: 40,
+                      height: 5,
+                      decoration: BoxDecoration(
+                        color: Colors.grey[300], 
+                        borderRadius: BorderRadius.circular(10)
+                      ),
+                    ),
+                  ),
+                  const SizedBox(height: 25),
+                  Text(
+                    'Apply for ${job['title']}', 
+                    style: const TextStyle(fontSize: 20, fontWeight: FontWeight.bold)
+                  ),
+                  const SizedBox(height: 5),
+                  Text(
+                    '${job['company']} • ${job['location']}', 
+                    style: const TextStyle(color: Colors.grey, fontSize: 14)
+                  ),
+                  const SizedBox(height: 20),
+                  const Text(
+                    'Resume / CV', 
+                    style: TextStyle(fontWeight: FontWeight.bold, fontSize: 14)
+                  ),
+                  const SizedBox(height: 10),
+                  GestureDetector(
+                    onTap: () {
+                      _showError('Resume upload coming soon');
+                    },
+                    child: Container(
+                      width: double.infinity,
+                      padding: const EdgeInsets.all(20),
+                      decoration: BoxDecoration(
+                        color: const Color(0xFFFFF5F5),
+                        borderRadius: BorderRadius.circular(15),
+                        border: Border.all(
+                          color: const Color(0xFFB30000).withValues(alpha: 0.08)
+                        ),
+                      ),
+                      child: const Column(
+                        children: [
+                          Icon(Icons.cloud_upload_rounded, color: Color(0xFFB30000), size: 32),
+                          SizedBox(height: 10),
+                          Text("Upload your file", style: TextStyle(fontWeight: FontWeight.w600)),
+                          Text(
+                            "PDF or DOCX up to 5MB", 
+                            style: TextStyle(color: Colors.grey, fontSize: 12)
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
+                  const SizedBox(height: 20),
+                  const Text(
+                    'Cover Letter (Optional)', 
+                    style: TextStyle(fontWeight: FontWeight.bold, fontSize: 14)
+                  ),
+                  const SizedBox(height: 10),
+                  TextField(
+                    maxLines: 4,
+                    onChanged: (value) {
+                      coverLetter = value;
+                    },
+                    decoration: InputDecoration(
+                      hintText: "Briefly explain why you're a good fit...",
+                      filled: true,
+                      fillColor: const Color(0xFFF5F5F5),
+                      border: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(12), 
+                        borderSide: BorderSide.none
+                      ),
+                    ),
+                  ),
+                  const SizedBox(height: 25),
+                  SizedBox(
+                    width: double.infinity,
+                    height: 55,
+                    child: ElevatedButton(
+                      onPressed: isSubmitting ? null : () async {
+                        print('Submit button pressed');
+                        setModalState(() => isSubmitting = true);
+                        
+                        // TODO: Implement actual application submission to backend
+                        // This is where you would send the application to your API
+                        await _submitApplication(job, userId, userFullname, userEmail, coverLetter);
+                        
+                        if (mounted) {
+                          Navigator.pop(context);
+                          _showSuccess('Application submitted for ${job['title']}!');
+                        }
+                        
+                        setModalState(() => isSubmitting = false);
+                      },
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: const Color(0xFFB30000),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(12)
+                        ),
+                      ),
+                      child: isSubmitting
+                          ? const SizedBox(
+                              height: 20,
+                              width: 20,
+                              child: CircularProgressIndicator(
+                                color: Colors.white, 
+                                strokeWidth: 2
+                              ),
+                            )
+                          : const Text(
+                              'Submit Application', 
+                              style: TextStyle(
+                                color: Colors.white, 
+                                fontWeight: FontWeight.bold, 
+                                fontSize: 16
+                              )
+                            ),
+                    ),
+                  ),
                 ],
               ),
-              CircleAvatar(
-                backgroundColor: Colors.white24, 
-                child: IconButton(
-                  icon: const Icon(Icons.bug_report, color: Colors.white, size: 20),
-                  onPressed: () => _showSessionDebugDialog(context),
-                ),
-              ),
-            ],
-          ),
-        ),
-        Expanded(
-          child: PageView.builder(
-            scrollDirection: Axis.vertical,
-            itemCount: _jobs.length,
-            itemBuilder: (context, index) {
-              return Center(
-                child: ConstrainedBox(
-                  constraints: const BoxConstraints(maxWidth: 600),
-                  child: _buildJobCard(context, _jobs[index], index),
-                ),
-              );
-            },
-          ),
-        ),
-      ],
+            );
+          },
+        );
+      },
     );
   }
 
-  void _checkUserSession(BuildContext context) async {
-    final prefs = await SharedPreferences.getInstance();
-    
-    final userId = prefs.getInt('user_id');
-    final fullname = prefs.getString('user_fullname');
-    final email = prefs.getString('user_email');
-    final username = prefs.getString('user_username');
-    final isLoggedIn = prefs.getBool('is_logged_in');
-    final isVerified = prefs.getBool('is_verified');
-    
-    print('\n========== JOB LIST CONTENT - USER SESSION ==========');
-    print('Is Logged In: $isLoggedIn');
-    print('User ID: $userId');
-    print('Full Name: $fullname');
-    print('Username: $username');
-    print('Email: $email');
-    print('Is Verified: $isVerified');
-    print('=====================================================\n');
+  Future<void> _submitApplication(Map<String, dynamic> job, int userId, String? userFullname, String? userEmail, String coverLetter) async {
+    try {
+      // Get API URL for submission
+      final apiUrl = await _getApiUrlForSubmission();
+      print('Submitting application to: $apiUrl');
+      
+      // Prepare the data
+      final applicationData = {
+        'job_id': job['id'],
+        'user_id': userId,
+        'user_fullname': userFullname ?? '',
+        'user_email': userEmail ?? '',
+        'cover_letter': coverLetter,
+        'status': 'pending',
+        'applied_date': DateTime.now().toIso8601String(),
+      };
+      
+      print('Application data: $applicationData');
+      
+      // Send to backend
+      final response = await http.post(
+        Uri.parse(apiUrl),
+        headers: {'Content-Type': 'application/json'},
+        body: json.encode(applicationData),
+      );
+      
+      print('Submission response status: ${response.statusCode}');
+      print('Submission response body: ${response.body}');
+      
+      if (response.statusCode == 200) {
+        final data = json.decode(response.body);
+        if (data['status'] == 'success') {
+          print('Application submitted successfully');
+        } else {
+          print('Application submission failed: ${data['message']}');
+        }
+      } else {
+        print('Server error: ${response.statusCode}');
+      }
+    } catch (e) {
+      print('Error submitting application: $e');
+      // Even if backend fails, we'll still show success for now
+      // Remove this once backend is implemented
+    }
   }
 
-  void _showSessionDebugDialog(BuildContext context) async {
-    final prefs = await SharedPreferences.getInstance();
-    
-    final userId = prefs.getInt('user_id');
-    final fullname = prefs.getString('user_fullname');
-    final email = prefs.getString('user_email');
-    final username = prefs.getString('user_username');
-    final isLoggedIn = prefs.getBool('is_logged_in');
-    final isVerified = prefs.getBool('is_verified');
-    
-    showDialog(
-      context: context,
-      builder: (context) => AlertDialog(
-        title: const Text('Session Information'),
-        content: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text('Logged In: ${isLoggedIn == true ? "Yes" : "No"}'),
-            const Divider(),
-            Text('User ID: ${userId ?? "N/A"}'),
-            Text('Full Name: ${fullname ?? "N/A"}'),
-            Text('Username: ${username ?? "N/A"}'),
-            Text('Email: ${email ?? "N/A"}'),
-            Text('Verified: ${isVerified == true ? "Yes" : "No"}'),
-          ],
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context),
-            child: const Text('Close'),
-          ),
-        ],
-      ),
-    );
+  Future<String> _getApiUrlForSubmission() async {
+    try {
+      if (Platform.isAndroid) {
+        return 'http://10.0.2.2/enricoso/api/submit_application.php';
+      }
+    } catch (e) {
+      print('Platform detection error: $e');
+    }
+    return 'http://localhost/enricoso/api/submit_application.php';
   }
 
-  void _showFullScreenImage(BuildContext context, String imagePath) {
+  void _showFullScreenImage(BuildContext context, String? imageUrl) {
+    if (imageUrl == null || imageUrl.isEmpty) return;
+    
+    final fullUrl = imageUrl.startsWith('http') 
+        ? imageUrl 
+        : 'http://localhost/$imageUrl';
+    
     showDialog(
       context: context,
       builder: (context) => Dialog.fullscreen(
@@ -376,8 +515,8 @@ class _JobListContent extends StatelessWidget {
                 panEnabled: true,
                 minScale: 0.5,
                 maxScale: 4.0,
-                child: Image.asset(
-                  imagePath,
+                child: Image.network(
+                  fullUrl,
                   fit: BoxFit.contain,
                   errorBuilder: (_, __, ___) => const Icon(Icons.broken_image, color: Colors.white, size: 50),
                 ),
@@ -397,100 +536,99 @@ class _JobListContent extends StatelessWidget {
     );
   }
 
-  void _showApplyModal(BuildContext context, String jobTitle) {
-    showModalBottomSheet(
-      context: context,
-      isScrollControlled: true,
-      backgroundColor: Colors.transparent,
-      builder: (context) => StatefulBuilder(
-        builder: (context, setModalState) {
-          return Container(
-            decoration: const BoxDecoration(
-              color: Colors.white,
-              borderRadius: BorderRadius.vertical(top: Radius.circular(25)),
-            ),
-            padding: EdgeInsets.only(
-              left: 24,
-              right: 24,
-              top: 15,
-              bottom: MediaQuery.of(context).viewInsets.bottom + 24,
-            ),
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Center(
-                  child: Container(
-                    width: 40,
-                    height: 5,
-                    decoration: BoxDecoration(color: Colors.grey[300], borderRadius: BorderRadius.circular(10)),
-                  ),
-                ),
-                const SizedBox(height: 25),
-                Text('Apply for $jobTitle', style: const TextStyle(fontSize: 20, fontWeight: FontWeight.bold)),
-                const SizedBox(height: 5),
-                const Text('Complete the details below to apply.', style: TextStyle(color: Colors.grey, fontSize: 14)),
-                const SizedBox(height: 20),
-                const Text('Resume / CV', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 14)),
-                const SizedBox(height: 10),
-                Container(
-                  width: double.infinity,
-                  padding: const EdgeInsets.all(20),
-                  decoration: BoxDecoration(
-                    color: const Color(0xFFFFF5F5),
-                    borderRadius: BorderRadius.circular(15),
-                    border: Border.all(color: const Color(0xFFB30000).withValues(alpha: 0.08)),
-                  ),
-                  child: Column(
-                    children: [
-                      const Icon(Icons.cloud_upload_rounded, color: Color(0xFFB30000), size: 32),
-                      const SizedBox(height: 10),
-                      const Text("Upload your file", style: TextStyle(fontWeight: FontWeight.w600)),
-                      const Text("PDF or DOCX up to 5MB", style: TextStyle(color: Colors.grey, fontSize: 12)),
-                    ],
-                  ),
-                ),
-                const SizedBox(height: 20),
-                const Text('Cover Letter (Optional)', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 14)),
-                const SizedBox(height: 10),
-                TextField(
-                  maxLines: 4,
-                  decoration: InputDecoration(
-                    hintText: "Briefly explain why you're a good fit...",
-                    filled: true,
-                    fillColor: const Color(0xFFF5F5F5),
-                    border: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: BorderSide.none),
-                  ),
-                ),
-                const SizedBox(height: 25),
-                SizedBox(
-                  width: double.infinity,
-                  height: 55,
-                  child: ElevatedButton(
-                    onPressed: () {
-                      Navigator.pop(context);
-                      ScaffoldMessenger.of(context).showSnackBar(
-                        const SnackBar(content: Text('Application Sent!'), backgroundColor: Color(0xFFB30000)),
-                      );
-                    },
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: const Color(0xFFB30000),
-                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-                    ),
-                    child: const Text('Submit Application', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 16)),
-                  ),
-                ),
-              ],
-            ),
-          );
-        },
-      ),
+  void _showError(String message) {
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(content: Text(message), backgroundColor: Colors.red),
+    );
+  }
+
+  void _showSuccess(String message) {
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(content: Text(message), backgroundColor: Colors.green),
+    );
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Column(
+      children: [
+        Container(
+          width: double.infinity,
+          decoration: const BoxDecoration(
+            gradient: LinearGradient(colors: [Color(0xFFB30000), Color(0xFF8A0000)]),
+          ),
+          padding: EdgeInsets.fromLTRB(20, MediaQuery.of(context).padding.top + 10, 20, 20),
+          child: const Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text('Find Your Dream Job', style: TextStyle(color: Colors.white, fontSize: 22, fontWeight: FontWeight.bold)),
+                  Text('Browse latest opportunities', style: TextStyle(color: Colors.white70, fontSize: 12)),
+                ],
+              ),
+            ],
+          ),
+        ),
+        Expanded(
+          child: _isLoading
+              ? const Center(
+                  child: CircularProgressIndicator(color: Color(0xFFB30000)),
+                )
+              : _errorMessage.isNotEmpty
+                  ? Center(
+                      child: Column(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          Icon(Icons.error_outline, size: 64, color: Colors.grey[400]),
+                          const SizedBox(height: 16),
+                          Text(_errorMessage, style: const TextStyle(color: Colors.grey)),
+                          const SizedBox(height: 16),
+                          ElevatedButton(
+                            onPressed: _fetchJobs,
+                            style: ElevatedButton.styleFrom(
+                              backgroundColor: const Color(0xFFB30000),
+                            ),
+                            child: const Text('Retry'),
+                          ),
+                        ],
+                      ),
+                    )
+                  : _jobs.isEmpty
+                      ? Center(
+                          child: Column(
+                            mainAxisAlignment: MainAxisAlignment.center,
+                            children: [
+                              Icon(Icons.work_off, size: 64, color: Colors.grey[400]),
+                              const SizedBox(height: 16),
+                              const Text('No jobs available', style: TextStyle(color: Colors.grey)),
+                            ],
+                          ),
+                        )
+                      : PageView.builder(
+                          scrollDirection: Axis.vertical,
+                          itemCount: _jobs.length,
+                          itemBuilder: (context, index) {
+                            return Center(
+                              child: ConstrainedBox(
+                                constraints: const BoxConstraints(maxWidth: 600),
+                                child: _buildJobCard(context, _jobs[index], index),
+                              ),
+                            );
+                          },
+                        ),
+        ),
+      ],
     );
   }
 
   Widget _buildJobCard(BuildContext context, Map<String, dynamic> job, int index) {
-    final String imagePath = 'img/${(index % 7) + 1}.jpg';
-
+    final String? imageUrl = job['job_image'];
+    final String salary = job['salary']?.toString() ?? 'Negotiable';
+    final String salaryDisplay = salary.contains('₱') ? salary : '₱$salary';
+    final bool hasImage = imageUrl != null && imageUrl.isNotEmpty;
+    
     return Container(
       margin: const EdgeInsets.all(16),
       decoration: BoxDecoration(
@@ -510,6 +648,8 @@ class _JobListContent extends StatelessWidget {
                   Text(job['title'], style: const TextStyle(fontSize: 20, fontWeight: FontWeight.bold)),
                   const SizedBox(height: 4),
                   Text(job['company'], style: const TextStyle(fontSize: 16, color: Colors.grey)),
+                  if (job['employer_name'] != null)
+                    Text(job['employer_name'], style: TextStyle(fontSize: 12, color: Colors.grey[600])),
                 ],
               ),
             ),
@@ -524,40 +664,117 @@ class _JobListContent extends StatelessWidget {
                       runSpacing: 8,
                       children: [
                         _chip(Icons.location_on, job['location']),
-                        _chip(Icons.attach_money, job['salary']),
-                        _chip(Icons.schedule, job['type']),
+                        _chip(Icons.attach_money, salaryDisplay),
+                        _chip(Icons.schedule, job['job_type']),
+                        if (job['vacancies'] != null)
+                          _chip(Icons.people, '${job['vacancies']} slots'),
+                        if (job['posted_date'] != null)
+                          _chip(Icons.access_time, job['posted_date']),
                       ],
                     ),
+                    if (job['contract_period'] != null) ...[
+                      const SizedBox(height: 12),
+                      Container(
+                        padding: const EdgeInsets.all(8),
+                        decoration: BoxDecoration(
+                          color: Colors.blue.withValues(alpha: 0.1),
+                          borderRadius: BorderRadius.circular(8),
+                        ),
+                        child: Row(
+                          children: [
+                            const Icon(Icons.calendar_today, size: 16, color: Colors.blue),
+                            const SizedBox(width: 8),
+                            Text('Contract Period: ${job['contract_period']}', style: const TextStyle(fontSize: 12)),
+                          ],
+                        ),
+                      ),
+                    ],
                     const SizedBox(height: 20),
                     const Text('Description', style: TextStyle(fontWeight: FontWeight.bold)),
-                    Text(job['description'], style: const TextStyle(color: Colors.black87, height: 1.4)),
+                    Text(job['description'] ?? 'No description available', style: const TextStyle(color: Colors.black87, height: 1.4)),
                     const SizedBox(height: 15),
                     Container(
                       padding: const EdgeInsets.all(12),
                       decoration: BoxDecoration(color: const Color(0xFFFFF5F5), borderRadius: BorderRadius.circular(10)),
-                      child: Text("Requirements: ${job['requirements']}", style: const TextStyle(fontSize: 13)),
+                      child: Text("Requirements: ${job['requirements'] ?? 'No specific requirements'}", style: const TextStyle(fontSize: 13)),
                     ),
-                    const SizedBox(height: 15),
-                    GestureDetector(
-                      onTap: () => _showFullScreenImage(context, imagePath),
-                      child: Hero(
-                        tag: 'jobImage$index',
-                        child: ClipRRect(
-                          borderRadius: BorderRadius.circular(12),
-                          child: Image.asset(
-                            imagePath,
-                            height: 150,
-                            width: double.infinity,
-                            fit: BoxFit.cover,
-                            errorBuilder: (_, __, ___) => Container(
+                    if (hasImage) ...[
+                      const SizedBox(height: 15),
+                      GestureDetector(
+                        onTap: () => _showFullScreenImage(context, imageUrl),
+                        child: Hero(
+                          tag: 'jobImage$index',
+                          child: ClipRRect(
+                            borderRadius: BorderRadius.circular(12),
+                            child: Image.network(
+                              'http://localhost/$imageUrl',
                               height: 150,
-                              color: Colors.grey[200],
-                              child: const Icon(Icons.image),
+                              width: double.infinity,
+                              fit: BoxFit.cover,
+                              errorBuilder: (_, __, ___) => Container(
+                                height: 150,
+                                color: Colors.grey[200],
+                                child: Column(
+                                  mainAxisAlignment: MainAxisAlignment.center,
+                                  children: [
+                                    Icon(Icons.broken_image, size: 40, color: Colors.grey[400]),
+                                    const SizedBox(height: 8),
+                                    Text('Image not available', style: TextStyle(color: Colors.grey[600], fontSize: 12)),
+                                  ],
+                                ),
+                              ),
+                              loadingBuilder: (context, child, loadingProgress) {
+                                if (loadingProgress == null) return child;
+                                return Container(
+                                  height: 150,
+                                  color: Colors.grey[200],
+                                  child: const Center(
+                                    child: CircularProgressIndicator(color: Color(0xFFB30000)),
+                                  ),
+                                );
+                              },
                             ),
                           ),
                         ),
                       ),
-                    ),
+                    ] else ...[
+                      const SizedBox(height: 15),
+                      Container(
+                        height: 100,
+                        width: double.infinity,
+                        decoration: BoxDecoration(
+                          gradient: const LinearGradient(
+                            colors: [Color(0xFFB30000), Color(0xFF8A0000)],
+                            begin: Alignment.topLeft,
+                            end: Alignment.bottomRight,
+                          ),
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                        child: Column(
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          children: [
+                            Icon(Icons.work_outline, size: 40, color: Colors.white.withValues(alpha: 0.8)),
+                            const SizedBox(height: 8),
+                            Text(
+                              job['company'] ?? 'Company',
+                              style: TextStyle(
+                                color: Colors.white.withValues(alpha: 0.9),
+                                fontSize: 14,
+                                fontWeight: FontWeight.w600,
+                              ),
+                            ),
+                            const SizedBox(height: 4),
+                            Text(
+                              'Hiring Now!',
+                              style: TextStyle(
+                                color: Colors.white.withValues(alpha: 0.7),
+                                fontSize: 12,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ],
                     const SizedBox(height: 20),
                   ],
                 ),
@@ -569,10 +786,11 @@ class _JobListContent extends StatelessWidget {
                 width: double.infinity,
                 height: 50,
                 child: ElevatedButton(
-                  onPressed: () => _showApplyModal(context, job['title']),
+                  onPressed: () => _applyForJob(job),
                   style: ElevatedButton.styleFrom(
-                      backgroundColor: const Color(0xFFB30000),
-                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10))),
+                    backgroundColor: const Color(0xFFB30000),
+                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                  ),
                   child: const Text('Apply Now', style: TextStyle(color: Colors.white, fontSize: 16, fontWeight: FontWeight.bold)),
                 ),
               ),

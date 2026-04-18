@@ -1,4 +1,7 @@
+import 'dart:io';
 import 'package:flutter/material.dart';
+import 'package:http/http.dart' as http;
+import 'dart:convert';
 import 'package:shared_preferences/shared_preferences.dart';
 
 class ApplicationsPage extends StatefulWidget {
@@ -11,6 +14,8 @@ class ApplicationsPage extends StatefulWidget {
 class _ApplicationsPageState extends State<ApplicationsPage> {
   Map<String, dynamic>? _userData;
   bool _isLoading = true;
+  List<Map<String, dynamic>> _applications = [];
+  String _errorMessage = '';
 
   @override
   void initState() {
@@ -18,11 +23,21 @@ class _ApplicationsPageState extends State<ApplicationsPage> {
     _loadUserSession();
   }
 
+  Future<String> _getApiUrl() async {
+    try {
+      if (Platform.isAndroid) {
+        return 'http://10.0.2.2/enricoso/api/myapplication.php';
+      }
+    } catch (e) {
+      print('Platform detection error: $e');
+    }
+    return 'http://localhost/enricoso/api/myapplication.php';
+  }
+
   Future<void> _loadUserSession() async {
     try {
       final prefs = await SharedPreferences.getInstance();
       
-      // Load user data
       final userId = prefs.getInt('user_id');
       final fullname = prefs.getString('user_fullname');
       final email = prefs.getString('user_email');
@@ -30,7 +45,6 @@ class _ApplicationsPageState extends State<ApplicationsPage> {
       final isLoggedIn = prefs.getBool('is_logged_in');
       final isVerified = prefs.getBool('is_verified');
       
-      // Print session information for debugging
       print('\n========== APPLICATIONS PAGE - USER SESSION ==========');
       print('Is Logged In: $isLoggedIn');
       print('User ID: $userId');
@@ -49,8 +63,8 @@ class _ApplicationsPageState extends State<ApplicationsPage> {
             'username': username ?? '',
             'is_verified': isVerified,
           };
-          _isLoading = false;
         });
+        await _fetchMyApplications();
       } else {
         setState(() {
           _isLoading = false;
@@ -65,60 +79,109 @@ class _ApplicationsPageState extends State<ApplicationsPage> {
     }
   }
 
-  // Updated mock data to be dynamic based on user
-  Map<String, dynamic> _getMockSubmission() {
-    final userName = _userData?['fullname']?.split(' ').first ?? 'User';
-    final userEmail = _userData?['email'] ?? 'user@example.com';
-    
-    return {
-      'resumeName': '${userName}_CV_2024.pdf',
-      'coverLetter': 'I am highly interested in this position because of my 5 years of experience with Flutter and Dart. I have built several high-performance apps and love the tech stack at your company.\n\nContact: $userEmail',
-      'submittedDate': 'Dec 10, 2023 at 2:30 PM',
-    };
+  Future<void> _fetchMyApplications() async {
+    setState(() {
+      _isLoading = true;
+      _errorMessage = '';
+    });
+
+    try {
+      final apiUrl = await _getApiUrl();
+      final url = '$apiUrl?user_id=${_userData!['id']}';
+      print('Fetching applications from: $url');
+      
+      final response = await http.get(Uri.parse(url));
+      
+      print('Response status: ${response.statusCode}');
+      print('Response body: ${response.body}');
+      
+      if (response.statusCode == 200) {
+        final data = json.decode(response.body);
+        
+        if (data['status'] == 'success') {
+          setState(() {
+            _applications = List<Map<String, dynamic>>.from(data['data']['applications']);
+            _isLoading = false;
+          });
+          print('Loaded ${_applications.length} applications');
+        } else {
+          setState(() {
+            _errorMessage = data['message'] ?? 'Failed to load applications';
+            _isLoading = false;
+          });
+        }
+      } else {
+        setState(() {
+          _errorMessage = 'Server error: ${response.statusCode}';
+          _isLoading = false;
+        });
+      }
+    } catch (e) {
+      print('Error fetching applications: $e');
+      setState(() {
+        _errorMessage = 'Connection error: $e';
+        _isLoading = false;
+      });
+    }
   }
 
-  void _printSessionDebug() async {
-    final prefs = await SharedPreferences.getInstance();
-    print('\n=== DEBUG: ALL SESSION KEYS AND VALUES ===');
-    final keys = prefs.getKeys();
-    for (String key in keys) {
-      print('$key: ${prefs.get(key)}');
-    }
-    print('==========================================\n');
-    
-    // Show dialog with session info
-    if (mounted) {
-      showDialog(
-        context: context,
-        builder: (context) => AlertDialog(
-          title: const Text('Session Information'),
-          content: Column(
-            mainAxisSize: MainAxisSize.min,
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text('User: ${_userData?['fullname'] ?? 'Not logged in'}'),
-              Text('Email: ${_userData?['email'] ?? 'N/A'}'),
-              Text('Username: ${_userData?['username'] ?? 'N/A'}'),
-              Text('User ID: ${_userData?['id'] ?? 'N/A'}'),
-              Text('Verified: ${_userData?['is_verified'] == true ? 'Yes' : 'No'}'),
-              const Divider(),
-              const Text('Total applications: 3', style: TextStyle(fontWeight: FontWeight.bold)),
-            ],
+  Future<void> _cancelApplication(int applicationId, String jobTitle) async {
+    final shouldCancel = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Cancel Application'),
+        content: Text('Are you sure you want to cancel your application for "$jobTitle"? This action cannot be undone.'),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context, false),
+            child: const Text('No'),
           ),
-          actions: [
-            TextButton(
-              onPressed: () => Navigator.pop(context),
-              child: const Text('Close'),
+          TextButton(
+            onPressed: () => Navigator.pop(context, true),
+            style: TextButton.styleFrom(
+              foregroundColor: const Color(0xFFB30000),
             ),
-          ],
-        ),
+            child: const Text('Yes, Cancel'),
+          ),
+        ],
+      ),
+    );
+
+    if (shouldCancel != true) return;
+
+    setState(() => _isLoading = true);
+
+    try {
+      final apiUrl = await _getApiUrl();
+      final response = await http.delete(
+        Uri.parse(apiUrl),
+        headers: {'Content-Type': 'application/json'},
+        body: json.encode({
+          'application_id': applicationId,
+          'user_id': _userData!['id']
+        }),
       );
+
+      if (response.statusCode == 200) {
+        final data = json.decode(response.body);
+        if (data['status'] == 'success') {
+          _showSuccess('Application cancelled successfully');
+          await _fetchMyApplications(); // Refresh the list
+        } else {
+          _showError(data['message'] ?? 'Failed to cancel application');
+        }
+      } else {
+        _showError('Failed to cancel application');
+      }
+    } catch (e) {
+      print('Error cancelling application: $e');
+      _showError('Failed to cancel application');
+    } finally {
+      setState(() => _isLoading = false);
     }
   }
 
-  void _showApplicationDetails(BuildContext context, String jobTitle, String status) {
-    final mockSubmission = _getMockSubmission();
-    
+  void _showApplicationDetails(Map<String, dynamic> application) {
     showModalBottomSheet(
       context: context,
       isScrollControlled: true,
@@ -134,84 +197,146 @@ class _ApplicationsPageState extends State<ApplicationsPage> {
           top: 15,
           bottom: MediaQuery.of(context).padding.bottom + 20,
         ),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Center(
-              child: Container(
-                width: 40,
-                height: 5,
-                decoration: BoxDecoration(color: Colors.grey[300], borderRadius: BorderRadius.circular(10)),
-              ),
-            ),
-            const SizedBox(height: 25),
-            Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-              children: [
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(jobTitle, style: const TextStyle(fontSize: 20, fontWeight: FontWeight.bold)),
-                      const SizedBox(height: 4),
-                      Text('Status: $status', style: const TextStyle(color: Colors.grey)),
-                      if (_userData != null) ...[
-                        const SizedBox(height: 4),
-                        Text('Applicant: ${_userData!['fullname']}', 
-                          style: const TextStyle(fontSize: 12, color: Color(0xFFB30000))),
-                      ],
-                    ],
-                  ),
+        child: SingleChildScrollView(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Center(
+                child: Container(
+                  width: 40,
+                  height: 5,
+                  decoration: BoxDecoration(color: Colors.grey[300], borderRadius: BorderRadius.circular(10)),
                 ),
-                const Icon(Icons.verified, color: Colors.blue, size: 28),
-              ],
-            ),
-            const Divider(height: 40),
-            
-            const Text('Your Submitted Files', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
-            const SizedBox(height: 12),
-            Container(
-              padding: const EdgeInsets.all(12),
-              decoration: BoxDecoration(
-                color: const Color(0xFFF8F9FA),
-                borderRadius: BorderRadius.circular(12),
-                border: Border.all(color: Colors.grey.shade200),
               ),
-              child: Row(
+              const SizedBox(height: 25),
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
-                  const Icon(Icons.picture_as_pdf, color: Color(0xFFB30000)),
-                  const SizedBox(width: 12),
                   Expanded(
-                    child: Text(mockSubmission['resumeName'], style: const TextStyle(fontWeight: FontWeight.w500)),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(application['job_title'], style: const TextStyle(fontSize: 20, fontWeight: FontWeight.bold)),
+                        const SizedBox(height: 4),
+                        Text(application['company_name'], style: const TextStyle(color: Colors.grey, fontSize: 14)),
+                        const SizedBox(height: 8),
+                        Container(
+                          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                          decoration: BoxDecoration(
+                            color: Color(int.parse(application['status_color'].substring(1, 7), radix: 16) + 0xFF000000).withValues(alpha: 0.1),
+                            borderRadius: BorderRadius.circular(8),
+                          ),
+                          child: Text(
+                            application['status_display'],
+                            style: TextStyle(
+                              color: Color(int.parse(application['status_color'].substring(1, 7), radix: 16) + 0xFF000000),
+                              fontSize: 12,
+                              fontWeight: FontWeight.bold,
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
                   ),
-                  const Icon(Icons.file_download_outlined, color: Colors.grey),
+                  if (application['job_image'] != null && application['job_image'].isNotEmpty)
+                    ClipRRect(
+                      borderRadius: BorderRadius.circular(10),
+                      child: Image.network(
+                        'http://localhost/${application['job_image']}',
+                        width: 60,
+                        height: 60,
+                        fit: BoxFit.cover,
+                        errorBuilder: (_, __, ___) => const Icon(Icons.work, size: 40, color: Color(0xFFB30000)),
+                      ),
+                    ),
                 ],
               ),
-            ),
-            
-            const SizedBox(height: 25),
-            const Text('Cover Letter Note', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
-            const SizedBox(height: 10),
-            Container(
-              width: double.infinity,
-              padding: const EdgeInsets.all(15),
-              decoration: BoxDecoration(
-                color: const Color(0xFFFFF5F5),
-                borderRadius: BorderRadius.circular(12),
+              const Divider(height: 40),
+              
+              const Text('Job Details', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
+              const SizedBox(height: 10),
+              _infoRow(Icons.location_on, 'Location', application['location']),
+              _infoRow(Icons.work_outline, 'Job Type', application['job_type']),
+              _infoRow(Icons.attach_money, 'Salary', '₱${application['salary'] ?? 'Negotiable'}'),
+              _infoRow(Icons.business, 'Employer', application['employer_name'] ?? 'N/A'),
+              _infoRow(Icons.email, 'Employer Email', application['employer_email'] ?? 'N/A'),
+              _infoRow(Icons.access_time, 'Applied Date', application['applied_date']),
+              
+              const SizedBox(height: 20),
+              const Text('Cover Letter', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
+              const SizedBox(height: 10),
+              Container(
+                width: double.infinity,
+                padding: const EdgeInsets.all(15),
+                decoration: BoxDecoration(
+                  color: const Color(0xFFFFF5F5),
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                child: Text(
+                  application['cover_letter']?.isNotEmpty == true 
+                      ? application['cover_letter'] 
+                      : 'No cover letter provided',
+                  style: const TextStyle(height: 1.5, color: Colors.black87),
+                ),
               ),
-              child: Text(
-                mockSubmission['coverLetter'],
-                style: const TextStyle(height: 1.5, color: Colors.black87),
+              
+              const SizedBox(height: 20),
+              const Text('Job Description', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
+              const SizedBox(height: 10),
+              Text(
+                application['job_description'] ?? 'No description available',
+                style: const TextStyle(height: 1.4, color: Colors.black87),
               ),
-            ),
-            const SizedBox(height: 25),
-            Text('Submitted on ${mockSubmission['submittedDate']}', 
-              style: const TextStyle(color: Colors.grey, fontSize: 12)),
-            const SizedBox(height: 10),
-          ],
+              
+              const SizedBox(height: 20),
+              const Text('Requirements', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
+              const SizedBox(height: 10),
+              Text(
+                application['job_requirements'] ?? 'No specific requirements',
+                style: const TextStyle(height: 1.4, color: Colors.black87),
+              ),
+              
+              const SizedBox(height: 30),
+            ],
+          ),
         ),
       ),
+    );
+  }
+
+  Widget _infoRow(IconData icon, String label, String value) {
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 12),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Icon(icon, size: 20, color: Colors.grey[600]),
+          const SizedBox(width: 12),
+          SizedBox(
+            width: 100,
+            child: Text(label, style: TextStyle(color: Colors.grey[600], fontSize: 14)),
+          ),
+          Expanded(
+            child: Text(
+              value,
+              style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w500),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  void _showError(String message) {
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(content: Text(message), backgroundColor: Colors.red),
+    );
+  }
+
+  void _showSuccess(String message) {
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(content: Text(message), backgroundColor: Colors.green),
     );
   }
 
@@ -232,7 +357,6 @@ class _ApplicationsPageState extends State<ApplicationsPage> {
       backgroundColor: const Color(0xFFF8F9FA),
       body: Column(
         children: [
-          // Professional Header with user info
           Container(
             width: double.infinity,
             decoration: const BoxDecoration(
@@ -245,7 +369,10 @@ class _ApplicationsPageState extends State<ApplicationsPage> {
                 const Text('My Applications', 
                   style: TextStyle(color: Colors.white, fontSize: 24, fontWeight: FontWeight.bold)),
                 const SizedBox(height: 4),
-                Text('Real-time updates on your journey', 
+                Text(
+                  _applications.length == 0 
+                      ? 'No applications yet' 
+                      : '${_applications.length} application${_applications.length > 1 ? 's' : ''} submitted',
                   style: TextStyle(color: Colors.white70, fontSize: 13)),
                 if (_userData != null) ...[
                   const SizedBox(height: 8),
@@ -255,75 +382,60 @@ class _ApplicationsPageState extends State<ApplicationsPage> {
               ],
             ),
           ),
-
           Expanded(
-            child: ListView(
-              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 20),
-              children: [
-                // Debug button to print session
-                _buildDebugButton(),
-                const SizedBox(height: 10),
-                
-                _buildApplicationCard(
-                  context,
-                  jobTitle: 'Senior Flutter Developer',
-                  company: 'Tech Innovators Inc.',
-                  status: 'Under Review',
-                  statusColor: Colors.orange,
-                  date: 'Dec 10, 2023',
-                ),
-                _buildApplicationCard(
-                  context,
-                  jobTitle: 'UI/UX Designer',
-                  company: 'Creative Solutions',
-                  status: 'Interviewing',
-                  statusColor: Colors.blue,
-                  date: 'Dec 08, 2023',
-                ),
-                _buildApplicationCard(
-                  context,
-                  jobTitle: 'Offer Received',
-                  company: 'Analytics Corp',
-                  status: 'Selected',
-                  statusColor: Colors.green,
-                  date: 'Nov 28, 2023',
-                ),
-              ],
-            ),
+            child: _errorMessage.isNotEmpty
+                ? Center(
+                    child: Column(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        Icon(Icons.error_outline, size: 64, color: Colors.grey[400]),
+                        const SizedBox(height: 16),
+                        Text(_errorMessage, style: const TextStyle(color: Colors.grey)),
+                        const SizedBox(height: 16),
+                        ElevatedButton(
+                          onPressed: _fetchMyApplications,
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: const Color(0xFFB30000),
+                          ),
+                          child: const Text('Retry'),
+                        ),
+                      ],
+                    ),
+                  )
+                : _applications.isEmpty
+                    ? Center(
+                        child: Column(
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          children: [
+                            Icon(Icons.work_off, size: 64, color: Colors.grey[400]),
+                            const SizedBox(height: 16),
+                            const Text('No applications found', style: TextStyle(color: Colors.grey)),
+                            const SizedBox(height: 8),
+                            const Text('Apply for jobs to see them here', 
+                              style: TextStyle(color: Colors.grey, fontSize: 12)),
+                          ],
+                        ),
+                      )
+                    : RefreshIndicator(
+                        onRefresh: _fetchMyApplications,
+                        child: ListView.builder(
+                          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 20),
+                          itemCount: _applications.length,
+                          itemBuilder: (context, index) {
+                            final application = _applications[index];
+                            return _buildApplicationCard(application);
+                          },
+                        ),
+                      ),
           ),
         ],
       ),
     );
   }
 
-  Widget _buildDebugButton() {
-    return Container(
-      margin: const EdgeInsets.only(bottom: 8),
-      child: ElevatedButton.icon(
-        onPressed: _printSessionDebug,
-        icon: const Icon(Icons.bug_report, size: 18),
-        label: const Text('Debug Session Info'),
-        style: ElevatedButton.styleFrom(
-          backgroundColor: Colors.grey[200],
-          foregroundColor: const Color(0xFFB30000),
-          elevation: 0,
-          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(10),
-          ),
-        ),
-      ),
-    );
-  }
-
-  Widget _buildApplicationCard(
-    BuildContext context, {
-    required String jobTitle,
-    required String company,
-    required String status,
-    required Color statusColor,
-    required String date,
-  }) {
+  Widget _buildApplicationCard(Map<String, dynamic> application) {
+    final statusColor = Color(int.parse(application['status_color'].substring(1, 7), radix: 16) + 0xFF000000);
+    
     return Container(
       margin: const EdgeInsets.only(bottom: 16),
       decoration: BoxDecoration(
@@ -351,22 +463,47 @@ class _ApplicationsPageState extends State<ApplicationsPage> {
                     color: const Color(0xFFF5F5F5),
                     borderRadius: BorderRadius.circular(12),
                   ),
-                  child: const Icon(Icons.business, color: Color(0xFFB30000)),
+                  child: ClipRRect(
+                    borderRadius: BorderRadius.circular(12),
+                    child: application['job_image'] != null && application['job_image'].isNotEmpty
+                        ? Image.network(
+                            'http://localhost/${application['job_image']}',
+                            fit: BoxFit.cover,
+                            errorBuilder: (_, __, ___) => const Icon(Icons.business, color: Color(0xFFB30000)),
+                          )
+                        : const Icon(Icons.business, color: Color(0xFFB30000)),
+                  ),
                 ),
                 const SizedBox(width: 16),
                 Expanded(
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      Text(jobTitle, style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
+                      Text(application['job_title'], 
+                        style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                      ),
                       const SizedBox(height: 4),
-                      Text(company, style: const TextStyle(color: Colors.grey, fontSize: 14)),
+                      Text(application['company_name'], 
+                        style: const TextStyle(color: Colors.grey, fontSize: 14)),
                       const SizedBox(height: 12),
                       Row(
                         mainAxisAlignment: MainAxisAlignment.spaceBetween,
                         children: [
-                          _statusBadge(status, statusColor),
-                          Text(date, style: const TextStyle(color: Colors.grey, fontSize: 12)),
+                          Container(
+                            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                            decoration: BoxDecoration(
+                              color: statusColor.withValues(alpha: 0.1),
+                              borderRadius: BorderRadius.circular(8),
+                            ),
+                            child: Text(
+                              application['status_display'],
+                              style: TextStyle(color: statusColor, fontSize: 11, fontWeight: FontWeight.bold),
+                            ),
+                          ),
+                          Text(application['applied_date'], 
+                            style: const TextStyle(color: Colors.grey, fontSize: 12)),
                         ],
                       ),
                     ],
@@ -382,8 +519,9 @@ class _ApplicationsPageState extends State<ApplicationsPage> {
               children: [
                 Expanded(
                   child: TextButton(
-                    onPressed: () => _showApplicationDetails(context, jobTitle, status),
-                    child: const Text('View Details', style: TextStyle(color: Color(0xFFB30000), fontWeight: FontWeight.bold)),
+                    onPressed: () => _showApplicationDetails(application),
+                    child: const Text('View Details', 
+                      style: TextStyle(color: Color(0xFFB30000), fontWeight: FontWeight.bold)),
                   ),
                 ),
                 const SizedBox(
@@ -392,55 +530,21 @@ class _ApplicationsPageState extends State<ApplicationsPage> {
                 ),
                 Expanded(
                   child: TextButton(
-                    onPressed: () {
-                      // Show cancellation dialog with user info
-                      showDialog(
-                        context: context,
-                        builder: (context) => AlertDialog(
-                          title: const Text('Cancel Application'),
-                          content: Text('Are you sure you want to cancel your application for $jobTitle?\n\n${_userData != null ? 'Applicant: ${_userData!['fullname']}' : ''}'),
-                          actions: [
-                            TextButton(
-                              onPressed: () => Navigator.pop(context),
-                              child: const Text('No'),
-                            ),
-                            TextButton(
-                              onPressed: () {
-                                Navigator.pop(context);
-                                ScaffoldMessenger.of(context).showSnackBar(
-                                  const SnackBar(
-                                    content: Text('Application cancelled'),
-                                    backgroundColor: Colors.orange,
-                                  ),
-                                );
-                              },
-                              child: const Text('Yes, Cancel'),
-                            ),
-                          ],
-                        ),
-                      );
-                    },
-                    child: const Text('Cancel', style: TextStyle(color: Colors.grey)),
+                    onPressed: application['status'] == 'pending'
+                        ? () => _cancelApplication(application['application_id'], application['job_title'])
+                        : null,
+                    child: Text(
+                      'Cancel',
+                      style: TextStyle(
+                        color: application['status'] == 'pending' ? Colors.grey : Colors.grey[400],
+                      ),
+                    ),
                   ),
                 ),
               ],
             ),
           ),
         ],
-      ),
-    );
-  }
-
-  Widget _statusBadge(String label, Color color) {
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-      decoration: BoxDecoration(
-        color: color.withValues(alpha: 0.1),
-        borderRadius: BorderRadius.circular(8),
-      ),
-      child: Text(
-        label,
-        style: TextStyle(color: color, fontSize: 11, fontWeight: FontWeight.bold),
       ),
     );
   }

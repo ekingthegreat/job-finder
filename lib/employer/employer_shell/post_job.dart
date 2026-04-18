@@ -17,6 +17,7 @@ class _PostJobPageState extends State<PostJobPage> {
   List<Map<String, dynamic>> _myPostedJobs = [];
   Map<String, List<Map<String, dynamic>>> _jobApplicants = {};
   bool _isLoading = false;
+  bool _isDeleting = false;
   
   // Form Controllers
   final _titleController = TextEditingController();
@@ -29,6 +30,14 @@ class _PostJobPageState extends State<PostJobPage> {
   String _selectedType = 'Full-time';
   File? _jobImage;
   String? _uploadedImagePath;
+  
+  // Date range for contract jobs
+  DateTime? _startDate;
+  DateTime? _endDate;
+  
+  // Edit mode
+  bool _isEditMode = false;
+  int? _editingJobId;
   
   final ImagePicker _picker = ImagePicker();
 
@@ -117,6 +126,8 @@ class _PostJobPageState extends State<PostJobPage> {
         Uri.parse('$apiUrl?action=applicants&job_id=$jobId'),
       );
       
+      print('Loading applicants for job $jobId: ${response.body}');
+      
       if (response.statusCode == 200) {
         final data = json.decode(response.body);
         if (data['status'] == 'success') {
@@ -173,6 +184,141 @@ class _PostJobPageState extends State<PostJobPage> {
     }
   }
   
+  Future<void> _selectDateRange() async {
+    final DateTimeRange? picked = await showDateRangePicker(
+      context: context,
+      firstDate: DateTime.now(),
+      lastDate: DateTime.now().add(const Duration(days: 365)),
+      builder: (context, child) {
+        return Theme(
+          data: Theme.of(context).copyWith(
+            colorScheme: const ColorScheme.light(primary: Color(0xFFB30000)),
+          ),
+          child: child!,
+        );
+      },
+    );
+    
+    if (picked != null) {
+      setState(() {
+        _startDate = picked.start;
+        _endDate = picked.end;
+      });
+    }
+  }
+  
+  void _editJob(Map<String, dynamic> job) {
+    // Populate form with job data
+    _titleController.text = job['title'] ?? '';
+    _companyController.text = job['company'] ?? '';
+    _locationController.text = job['location'] ?? '';
+    _salaryController.text = job['salary'] ?? '';
+    _vacanciesController.text = (job['vacancies'] ?? 1).toString();
+    _descriptionController.text = job['description'] ?? '';
+    _requirementsController.text = job['requirements'] ?? '';
+    _selectedType = job['job_type'] ?? 'Full-time';
+    _uploadedImagePath = job['job_image'];
+    
+    // Parse dates if they exist
+    if (job['start_date'] != null && job['end_date'] != null) {
+      _startDate = DateTime.tryParse(job['start_date']);
+      _endDate = DateTime.tryParse(job['end_date']);
+    } else {
+      _startDate = null;
+      _endDate = null;
+    }
+    
+    setState(() {
+      _isEditMode = true;
+      _editingJobId = job['id'];
+    });
+    
+    // Scroll to top to show the edit form
+    Scrollable.ensureVisible(context, duration: const Duration(milliseconds: 500));
+  }
+  
+  void _cancelEdit() {
+    _clearForm();
+    setState(() {
+      _isEditMode = false;
+      _editingJobId = null;
+    });
+  }
+  
+  Future<void> _updateJob() async {
+    // Validate required fields
+    if (_titleController.text.isEmpty) {
+      _showError('Please enter job title');
+      return;
+    }
+    
+    if (_locationController.text.isEmpty) {
+      _showError('Please enter job location');
+      return;
+    }
+    
+    // Validate date range for contract jobs
+    if (_selectedType == 'Contract' && (_startDate == null || _endDate == null)) {
+      _showError('Please select contract date range');
+      return;
+    }
+    
+    setState(() => _isLoading = true);
+    
+    try {
+      final apiUrl = await _getApiUrl();
+      
+      // Prepare job data
+      final jobData = {
+        'job_id': _editingJobId,
+        'employer_id': _userData!['id'],
+        'title': _titleController.text.trim(),
+        'company': _companyController.text.trim().isEmpty 
+            ? _userData!['fullname'] 
+            : _companyController.text.trim(),
+        'job_type': _selectedType,
+        'location': _locationController.text.trim(),
+        'salary': _salaryController.text.trim(),
+        'vacancies': int.tryParse(_vacanciesController.text.trim()) ?? 1,
+        'description': _descriptionController.text.trim(),
+        'requirements': _requirementsController.text.trim(),
+        'job_image': _uploadedImagePath,
+        'start_date': _startDate?.toIso8601String(),
+        'end_date': _endDate?.toIso8601String(),
+      };
+      
+      print('Updating job data: ${json.encode(jobData)}');
+      
+      final response = await http.put(
+        Uri.parse(apiUrl),
+        headers: {'Content-Type': 'application/json'},
+        body: json.encode(jobData),
+      );
+      
+      print('Response status: ${response.statusCode}');
+      print('Response body: ${response.body}');
+      
+      if (response.statusCode == 200) {
+        final data = json.decode(response.body);
+        if (data['status'] == 'success') {
+          _clearForm();
+          _cancelEdit();
+          await _loadMyJobs();
+          _showSuccess('Job updated successfully!');
+        } else {
+          _showError(data['message'] ?? 'Failed to update job');
+        }
+      } else {
+        _showError('Server error: ${response.statusCode}');
+      }
+    } catch (e) {
+      print('Error updating job: $e');
+      _showError('Connection error: $e');
+    } finally {
+      setState(() => _isLoading = false);
+    }
+  }
+  
   Future<void> _publishJob() async {
     // Validate required fields
     if (_titleController.text.isEmpty) {
@@ -182,6 +328,12 @@ class _PostJobPageState extends State<PostJobPage> {
     
     if (_locationController.text.isEmpty) {
       _showError('Please enter job location');
+      return;
+    }
+    
+    // Validate date range for contract jobs
+    if (_selectedType == 'Contract' && (_startDate == null || _endDate == null)) {
+      _showError('Please select contract date range');
       return;
     }
     
@@ -204,6 +356,8 @@ class _PostJobPageState extends State<PostJobPage> {
         'description': _descriptionController.text.trim(),
         'requirements': _requirementsController.text.trim(),
         'job_image': _uploadedImagePath,
+        'start_date': _startDate?.toIso8601String(),
+        'end_date': _endDate?.toIso8601String(),
       };
       
       print('Sending job data: ${json.encode(jobData)}');
@@ -228,6 +382,8 @@ class _PostJobPageState extends State<PostJobPage> {
           setState(() {
             _uploadedImagePath = null;
             _jobImage = null;
+            _startDate = null;
+            _endDate = null;
           });
         } else {
           _showError(data['message'] ?? 'Failed to post job');
@@ -243,8 +399,91 @@ class _PostJobPageState extends State<PostJobPage> {
     }
   }
   
-  Future<void> _deleteJob(int jobId) async {
+  Future<void> _toggleJobStatus(int jobId, String currentStatus) async {
+    final newStatus = currentStatus == 'active' ? 'closed' : 'active';
+    final action = newStatus == 'active' ? 'activate' : 'close';
+    
+    final shouldToggle = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: Text('${action.toUpperCase()} Job'),
+        content: Text('Are you sure you want to ${action} this job posting?'),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context, false),
+            child: const Text('Cancel'),
+          ),
+          TextButton(
+            onPressed: () => Navigator.pop(context, true),
+            style: TextButton.styleFrom(
+              foregroundColor: const Color(0xFFB30000),
+            ),
+            child: Text(action.toUpperCase()),
+          ),
+        ],
+      ),
+    );
+
+    if (shouldToggle != true) return;
+    
     setState(() => _isLoading = true);
+    
+    try {
+      final apiUrl = await _getApiUrl();
+      final response = await http.put(
+        Uri.parse(apiUrl),
+        headers: {'Content-Type': 'application/json'},
+        body: json.encode({
+          'job_id': jobId,
+          'status': newStatus
+        }),
+      );
+      
+      if (response.statusCode == 200) {
+        final data = json.decode(response.body);
+        if (data['status'] == 'success') {
+          await _loadMyJobs();
+          _showSuccess('Job ${action}ed successfully');
+        } else {
+          _showError(data['message'] ?? 'Failed to ${action} job');
+        }
+      } else {
+        _showError('Failed to ${action} job');
+      }
+    } catch (e) {
+      print('Error toggling job status: $e');
+      _showError('Failed to ${action} job');
+    } finally {
+      setState(() => _isLoading = false);
+    }
+  }
+  
+  Future<void> _deleteJob(int jobId, String jobTitle) async {
+    // Show confirmation dialog
+    final shouldDelete = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Delete Job Posting'),
+        content: Text('Are you sure you want to delete "$jobTitle"? This action cannot be undone.'),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context, false),
+            child: const Text('Cancel'),
+          ),
+          TextButton(
+            onPressed: () => Navigator.pop(context, true),
+            style: TextButton.styleFrom(
+              foregroundColor: const Color(0xFFB30000),
+            ),
+            child: const Text('Delete'),
+          ),
+        ],
+      ),
+    );
+
+    if (shouldDelete != true) return;
+
+    setState(() => _isDeleting = true);
     
     try {
       final apiUrl = await _getApiUrl();
@@ -259,49 +498,58 @@ class _PostJobPageState extends State<PostJobPage> {
         if (data['status'] == 'success') {
           await _loadMyJobs();
           _showSuccess('Job deleted successfully');
+        } else {
+          _showError(data['message'] ?? 'Failed to delete job');
         }
+      } else {
+        _showError('Failed to delete job');
       }
     } catch (e) {
       print('Error deleting job: $e');
       _showError('Failed to delete job');
     } finally {
-      setState(() => _isLoading = false);
+      setState(() => _isDeleting = false);
     }
   }
   
   Future<void> _updateApplicationStatus(int applicationId, String status) async {
-    // Implementation for updating application status
     setState(() => _isLoading = true);
     
     try {
-      // TODO: Implement API call to update application status
-      // final apiUrl = await _getApiUrl();
-      // final response = await http.put(
-      //   Uri.parse(apiUrl),
-      //   headers: {'Content-Type': 'application/json'},
-      //   body: json.encode({
-      //     'application_id': applicationId,
-      //     'status': status
-      //   }),
-      // );
+      final apiUrl = await _getApiUrl();
+      final response = await http.put(
+        Uri.parse('$apiUrl?action=update_application_status'),
+        headers: {'Content-Type': 'application/json'},
+        body: json.encode({
+          'application_id': applicationId,
+          'status': status  // This will be 'accepted' or 'declined'
+        }),
+      );
       
-      // Simulate API call
-      await Future.delayed(const Duration(seconds: 1));
+      print('Update status response: ${response.body}');
       
-      _showSuccess('Application ${status}d');
-      
-      // Reload applicants to reflect status change
-      // Find the job_id for this application and reload
-      for (var entry in _jobApplicants.entries) {
-        final jobId = int.parse(entry.key);
-        await _loadApplicants(jobId);
+      if (response.statusCode == 200) {
+        final data = json.decode(response.body);
+        if (data['status'] == 'success') {
+          String displayStatus = status == 'accepted' ? 'shortlisted' : 'rejected';
+          _showSuccess('Application $displayStatus');
+          // Reload applicants to reflect status change
+          for (var job in _myPostedJobs) {
+            await _loadApplicants(job['id']);
+          }
+        } else {
+          _showError(data['message'] ?? 'Failed to update status');
+        }
+      } else {
+        _showError('Failed to update status');
       }
     } catch (e) {
+      print('Error updating application status: $e');
       _showError('Failed to update status');
     } finally {
       setState(() => _isLoading = false);
     }
-  }
+}
   
   void _clearForm() {
     _titleController.clear();
@@ -314,6 +562,8 @@ class _PostJobPageState extends State<PostJobPage> {
     setState(() {
       _jobImage = null;
       _uploadedImagePath = null;
+      _startDate = null;
+      _endDate = null;
     });
   }
   
@@ -333,7 +583,7 @@ class _PostJobPageState extends State<PostJobPage> {
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: const Color(0xFFF5F5F5),
-      body: _isLoading
+      body: _isLoading || _isDeleting
           ? const Center(child: CircularProgressIndicator(color: Color(0xFFB30000)))
           : SingleChildScrollView(
               child: Column(
@@ -406,7 +656,20 @@ class _PostJobPageState extends State<PostJobPage> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          const Text("Post New Vacancy", style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: Color(0xFFB30000))),
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              Text(
+                _isEditMode ? "Edit Job Listing" : "Post New Vacancy",
+                style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: Color(0xFFB30000)),
+              ),
+              if (_isEditMode)
+                TextButton(
+                  onPressed: _cancelEdit,
+                  child: const Text('Cancel Edit', style: TextStyle(color: Colors.grey)),
+                ),
+            ],
+          ),
           const SizedBox(height: 15),
           
           // Job Image Picker
@@ -425,14 +688,31 @@ class _PostJobPageState extends State<PostJobPage> {
                       borderRadius: BorderRadius.circular(10),
                       child: Image.file(_jobImage!, fit: BoxFit.cover, width: double.infinity),
                     )
-                  : Column(
-                      mainAxisAlignment: MainAxisAlignment.center,
-                      children: [
-                        Icon(Icons.add_photo_alternate, size: 50, color: Colors.grey[400]),
-                        const SizedBox(height: 8),
-                        Text('Tap to add job image', style: TextStyle(color: Colors.grey[600])),
-                      ],
-                    ),
+                  : _uploadedImagePath != null && _uploadedImagePath!.isNotEmpty
+                      ? ClipRRect(
+                          borderRadius: BorderRadius.circular(10),
+                          child: Image.network(
+                            'http://localhost/$_uploadedImagePath',
+                            fit: BoxFit.cover,
+                            width: double.infinity,
+                            errorBuilder: (_, __, ___) => Column(
+                              mainAxisAlignment: MainAxisAlignment.center,
+                              children: [
+                                Icon(Icons.broken_image, size: 50, color: Colors.grey[400]),
+                                const SizedBox(height: 8),
+                                Text('Failed to load image', style: TextStyle(color: Colors.grey[600])),
+                              ],
+                            ),
+                          ),
+                        )
+                      : Column(
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          children: [
+                            Icon(Icons.add_photo_alternate, size: 50, color: Colors.grey[400]),
+                            const SizedBox(height: 8),
+                            Text('Tap to add job image', style: TextStyle(color: Colors.grey[600])),
+                          ],
+                        ),
             ),
           ),
           const SizedBox(height: 15),
@@ -455,14 +735,62 @@ class _PostJobPageState extends State<PostJobPage> {
                 child: DropdownButtonFormField<String>(
                   value: _selectedType,
                   items: ['Full-time', 'Part-time', 'Remote', 'Contract'].map((t) => DropdownMenuItem(value: t, child: Text(t))).toList(),
-                  onChanged: (val) => setState(() => _selectedType = val!),
+                  onChanged: (val) {
+                    setState(() {
+                      _selectedType = val!;
+                      if (_selectedType != 'Contract') {
+                        _startDate = null;
+                        _endDate = null;
+                      }
+                    });
+                  },
                   decoration: const InputDecoration(labelText: "Job Type"),
                 ),
               ),
               const SizedBox(width: 12),
-              Expanded(child: TextField(controller: _salaryController, decoration: const InputDecoration(labelText: "Salary Range", prefixIcon: Icon(Icons.attach_money)))),
+              Expanded(child: TextField(controller: _salaryController, decoration: const InputDecoration(labelText: "Salary Range (₱)", prefixIcon: Icon(Icons.attach_money)))),
             ],
           ),
+          
+          // Date range picker for contract jobs
+          if (_selectedType == 'Contract') ...[
+            const SizedBox(height: 12),
+            GestureDetector(
+              onTap: _selectDateRange,
+              child: Container(
+                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 16),
+                decoration: BoxDecoration(
+                  border: Border.all(color: Colors.grey[300]!),
+                  borderRadius: BorderRadius.circular(8),
+                ),
+                child: Row(
+                  children: [
+                    const Icon(Icons.calendar_today, color: Color(0xFFB30000), size: 20),
+                    const SizedBox(width: 12),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          const Text('Contract Period*', style: TextStyle(fontSize: 12, color: Colors.grey)),
+                          const SizedBox(height: 4),
+                          Text(
+                            _startDate != null && _endDate != null
+                                ? '${_startDate!.day}/${_startDate!.month}/${_startDate!.year} - ${_endDate!.day}/${_endDate!.month}/${_endDate!.year}'
+                                : 'Select start and end date',
+                            style: TextStyle(
+                              color: _startDate != null ? Colors.black : Colors.grey[600],
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                    const Icon(Icons.arrow_drop_down, color: Colors.grey),
+                  ],
+                ),
+              ),
+            ),
+          ],
+          
           const SizedBox(height: 12),
           TextField(controller: _descriptionController, maxLines: 2, decoration: const InputDecoration(labelText: "Job Description", alignLabelWithHint: true)),
           const SizedBox(height: 12),
@@ -472,11 +800,17 @@ class _PostJobPageState extends State<PostJobPage> {
             width: double.infinity,
             height: 50,
             child: ElevatedButton(
-              onPressed: _isLoading ? null : _publishJob,
-              style: ElevatedButton.styleFrom(backgroundColor: const Color(0xFFB30000), shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10))),
+              onPressed: _isLoading ? null : (_isEditMode ? _updateJob : _publishJob),
+              style: ElevatedButton.styleFrom(
+                backgroundColor: const Color(0xFFB30000),
+                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10))
+              ),
               child: _isLoading
                   ? const SizedBox(height: 20, width: 20, child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2))
-                  : const Text("Publish Listing", style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
+                  : Text(
+                      _isEditMode ? "Update Listing" : "Publish Listing",
+                      style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold)
+                    ),
             ),
           ),
         ],
@@ -492,48 +826,174 @@ class _PostJobPageState extends State<PostJobPage> {
       decoration: BoxDecoration(
         color: Colors.white, 
         borderRadius: BorderRadius.circular(15), 
-        border: Border.all(color: Colors.grey.shade200),
+        boxShadow: [
+          BoxShadow(color: Colors.black.withValues(alpha: 0.08), blurRadius: 8, offset: const Offset(0, 2)),
+        ],
       ),
-      child: ExpansionTile(
-        leading: job['job_image'] != null && job['job_image'].toString().isNotEmpty
-            ? ClipRRect(
-                borderRadius: BorderRadius.circular(8),
-                child: Image.network('http://localhost/${job['job_image']}', width: 50, height: 50, fit: BoxFit.cover, 
-                  errorBuilder: (_, __, ___) => 
-                    CircleAvatar(backgroundColor: const Color(0xFFB30000).withValues(alpha: 0.1), 
-                    child: const Icon(Icons.work, color: Color(0xFFB30000)))),
-              )
-            : CircleAvatar(
-                backgroundColor: const Color(0xFFB30000).withValues(alpha: 0.1),
-                child: const Icon(Icons.work, color: Color(0xFFB30000)),
-              ),
-        title: Text(job['title'], style: const TextStyle(fontWeight: FontWeight.bold)),
-        subtitle: Text("${job['company']} • ${job['vacancies']} Vacant Slots • ${job['job_type']}"),
-        trailing: IconButton(
-          icon: const Icon(Icons.delete_outline, color: Colors.red),
-          onPressed: () => _deleteJob(job['id']),
-        ),
+      child: Column(
         children: [
-          const Divider(height: 1),
-          Padding(
-            padding: const EdgeInsets.all(12),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
+          // Job Header
+          Container(
+            padding: const EdgeInsets.all(16),
+            decoration: BoxDecoration(
+              color: Colors.white,
+              borderRadius: BorderRadius.circular(15),
+            ),
+            child: Row(
               children: [
-                Text("📍 ${job['location']}", style: const TextStyle(fontSize: 12)),
-                const SizedBox(height: 4),
-                Text("💰 ${job['salary'] ?? 'Negotiable'}", style: const TextStyle(fontSize: 12)),
-                const SizedBox(height: 8),
-                Text(job['description'] ?? '', style: const TextStyle(fontSize: 12)),
-                const Divider(height: 20),
-                const Text("Applicants", style: TextStyle(fontWeight: FontWeight.bold)),
-                const SizedBox(height: 8),
-                if (applicants.isEmpty)
-                  const Text("No applicants yet.", style: TextStyle(color: Colors.grey))
-                else
-                  ...applicants.map((applicant) => _buildApplicantCard(applicant, job['id'])),
+                // Job Image
+                ClipRRect(
+                  borderRadius: BorderRadius.circular(10),
+                  child: Container(
+                    width: 60,
+                    height: 60,
+                    color: const Color(0xFFB30000).withValues(alpha: 0.1),
+                    child: job['job_image'] != null && job['job_image'].toString().isNotEmpty
+                        ? Image.network(
+                            'http://localhost/${job['job_image']}',
+                            fit: BoxFit.cover,
+                            errorBuilder: (_, __, ___) => const Icon(Icons.work, color: Color(0xFFB30000), size: 30),
+                          )
+                        : const Icon(Icons.work, color: Color(0xFFB30000), size: 30),
+                  ),
+                ),
+                const SizedBox(width: 16),
+                // Job Info
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        job['title'],
+                        style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                      const SizedBox(height: 4),
+                      Text(
+                        job['company'],
+                        style: TextStyle(fontSize: 13, color: Colors.grey[600]),
+                      ),
+                      const SizedBox(height: 4),
+                      Wrap(
+                        spacing: 8,
+                        runSpacing: 4,
+                        children: [
+                          _buildJobChip(Icons.location_on, job['location']),
+                          _buildJobChip(Icons.work_outline, job['job_type']),
+                          _buildJobChip(Icons.people, '${job['vacancies']} slots'),
+                          if (job['salary'] != null && job['salary'].toString().isNotEmpty)
+                            _buildJobChip(Icons.attach_money, '₱${job['salary']}'),
+                        ],
+                      ),
+                    ],
+                  ),
+                ),
+                // Action Buttons
+                Column(
+                  children: [
+                    // Status Toggle Button
+                    Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                      decoration: BoxDecoration(
+                        color: job['status'] == 'active' ? Colors.green.withValues(alpha: 0.1) : Colors.grey.withValues(alpha: 0.1),
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                      child: GestureDetector(
+                        onTap: () => _toggleJobStatus(job['id'], job['status']),
+                        child: Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            Icon(
+                              job['status'] == 'active' ? Icons.check_circle : Icons.cancel,
+                              size: 14,
+                              color: job['status'] == 'active' ? Colors.green : Colors.grey,
+                            ),
+                            const SizedBox(width: 4),
+                            Text(
+                              job['status'] == 'active' ? 'Active' : 'Closed',
+                              style: TextStyle(
+                                fontSize: 11,
+                                color: job['status'] == 'active' ? Colors.green : Colors.grey,
+                                fontWeight: FontWeight.w600,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ),
+                    const SizedBox(height: 8),
+                    Row(
+                      children: [
+                        // Edit Button
+                        IconButton(
+                          icon: const Icon(Icons.edit_outlined, color: Color(0xFFB30000), size: 22),
+                          onPressed: () => _editJob(job),
+                          tooltip: 'Edit Job',
+                        ),
+                        // Delete Button
+                        IconButton(
+                          icon: const Icon(Icons.delete_outline, color: Colors.red, size: 22),
+                          onPressed: () => _deleteJob(job['id'], job['title']),
+                          tooltip: 'Delete Job',
+                        ),
+                      ],
+                    ),
+                  ],
+                ),
               ],
             ),
+          ),
+          
+          // Expandable Section for Applicants
+          ExpansionTile(
+            leading: const Icon(Icons.people_outline, color: Color(0xFFB30000)),
+            title: Text(
+              'Applicants (${applicants.length})',
+              style: const TextStyle(fontWeight: FontWeight.w600),
+            ),
+            trailing: const Icon(Icons.keyboard_arrow_down),
+            children: [
+              const Divider(height: 1),
+              if (applicants.isEmpty)
+                const Padding(
+                  padding: EdgeInsets.all(32),
+                  child: Center(
+                    child: Text("No applicants yet", style: TextStyle(color: Colors.grey)),
+                  ),
+                )
+              else
+                ListView.builder(
+                  shrinkWrap: true,
+                  physics: const NeverScrollableScrollPhysics(),
+                  itemCount: applicants.length,
+                  itemBuilder: (context, index) {
+                    final applicant = applicants[index];
+                    return _buildApplicantCard(applicant, job['id']);
+                  },
+                ),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+  
+  Widget _buildJobChip(IconData icon, String label) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+      decoration: BoxDecoration(
+        color: const Color(0xFFB30000).withValues(alpha: 0.1),
+        borderRadius: BorderRadius.circular(12),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Icon(icon, size: 12, color: const Color(0xFFB30000)),
+          const SizedBox(width: 4),
+          Text(
+            label,
+            style: const TextStyle(fontSize: 11, color: Color(0xFFB30000)),
           ),
         ],
       ),
@@ -542,36 +1002,79 @@ class _PostJobPageState extends State<PostJobPage> {
   
   Widget _buildApplicantCard(Map<String, dynamic> applicant, int jobId) {
     return Card(
-      margin: const EdgeInsets.only(bottom: 8),
-      child: ListTile(
-        leading: const CircleAvatar(child: Icon(Icons.person)),
-        title: Text(applicant['applicant_name'], style: const TextStyle(fontWeight: FontWeight.bold)),
-        subtitle: Column(
+      margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+      elevation: 2,
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+      child: ExpansionTile(
+        leading: CircleAvatar(
+          backgroundColor: const Color(0xFFB30000).withValues(alpha: 0.1),
+          child: const Icon(Icons.person, color: Color(0xFFB30000)),
+        ),
+        title: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Text(applicant['applicant_email']),
-            Text("Status: ${applicant['status']}", style: TextStyle(
+            Text(
+              applicant['applicant_name'],
+              style: const TextStyle(fontWeight: FontWeight.bold),
+            ),
+            const SizedBox(height: 4),
+            Text(applicant['applicant_email'], style: const TextStyle(fontSize: 12)),
+          ],
+        ),
+        subtitle: Container(
+          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+          decoration: BoxDecoration(
+            color: applicant['status'] == 'accepted' ? Colors.green.withValues(alpha: 0.1) :
+                   applicant['status'] == 'declined' ? Colors.red.withValues(alpha: 0.1) :
+                   Colors.orange.withValues(alpha: 0.1),
+            borderRadius: BorderRadius.circular(12),
+          ),
+          child: Text(
+            "Status: ${applicant['status']}",
+            style: TextStyle(
+              fontSize: 11,
               color: applicant['status'] == 'accepted' ? Colors.green : 
                      applicant['status'] == 'declined' ? Colors.red : Colors.orange,
-              fontWeight: FontWeight.bold,
-            )),
-          ],
+              fontWeight: FontWeight.w600,
+            ),
+          ),
         ),
         trailing: Row(
           mainAxisSize: MainAxisSize.min,
           children: [
             if (applicant['status'] != 'declined')
               IconButton(
-                icon: const Icon(Icons.close, color: Colors.red),
+                icon: const Icon(Icons.close, color: Colors.red, size: 20),
                 onPressed: () => _updateApplicationStatus(applicant['id'], 'declined'),
+                tooltip: 'Decline',
               ),
             if (applicant['status'] != 'accepted')
               IconButton(
-                icon: const Icon(Icons.check, color: Colors.green),
+                icon: const Icon(Icons.check, color: Colors.green, size: 20),
                 onPressed: () => _updateApplicationStatus(applicant['id'], 'accepted'),
+                tooltip: 'Accept',
               ),
           ],
         ),
+        children: [
+          if (applicant['cover_letter'] != null && applicant['cover_letter'].isNotEmpty)
+            Padding(
+              padding: const EdgeInsets.all(16),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  const Text('Cover Letter:', style: TextStyle(fontWeight: FontWeight.bold)),
+                  const SizedBox(height: 8),
+                  Text(applicant['cover_letter']),
+                  const SizedBox(height: 8),
+                  Text(
+                    'Applied on: ${applicant['applied_date']}',
+                    style: const TextStyle(fontSize: 12, color: Colors.grey),
+                  ),
+                ],
+              ),
+            ),
+        ],
       ),
     );
   }
