@@ -29,16 +29,7 @@ class _EmployerProfileState extends State<EmployerProfile> {
       final email = prefs.getString('user_email');
       final username = prefs.getString('user_username');
       final isVerified = prefs.getBool('is_verified') ?? false;
-      
-      // Print session for debugging
-      print('\n========== EMPLOYER PROFILE PAGE - USER SESSION ==========');
-      print('User ID: $userId');
-      print('Full Name: $fullname');
-      print('Username: $username');
-      print('Email: $email');
-      print('Is Verified: $isVerified');
-      print('==========================================================\n');
-      
+        
       if (userId != null && fullname != null) {
         setState(() {
           _userData = {
@@ -54,10 +45,10 @@ class _EmployerProfileState extends State<EmployerProfile> {
         setState(() {
           _isLoading = false;
         });
-        print('No user session found - using default employer data');
+     //   print('No user session found - using default employer data');
       }
     } catch (e) {
-      print('Error loading user session: $e');
+  //    print('Error loading user session: $e');
       setState(() {
         _isLoading = false;
       });
@@ -104,14 +95,14 @@ class _EmployerProfileState extends State<EmployerProfile> {
       await prefs.remove('is_logged_in');
       await prefs.remove('is_verified');
       
-      print('User logged out successfully');
+  //    print('User logged out successfully');
       
       if (mounted) {
         // Navigate to login page and remove all previous routes
         Navigator.pushNamedAndRemoveUntil(context, '/login', (route) => false);
       }
     } catch (e) {
-      print('Error during logout: $e');
+   //   print('Error during logout: $e');
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
@@ -128,12 +119,13 @@ class _EmployerProfileState extends State<EmployerProfile> {
 
   void _printSessionDebug() async {
     final prefs = await SharedPreferences.getInstance();
-    print('\n=== EMPLOYER PROFILE DEBUG: ALL SESSION DATA ===');
+   // print('\n=== EMPLOYER PROFILE DEBUG: ALL SESSION DATA ===');
     final keys = prefs.getKeys();
+    // ignore: unused_local_variable
     for (String key in keys) {
-      print('$key: ${prefs.get(key)}');
+    //  print('$key: ${prefs.get(key)}');
     }
-    print('================================================\n');
+   // print('================================================\n');
     
     if (mounted) {
       showDialog(
@@ -167,8 +159,10 @@ class _EmployerProfileState extends State<EmployerProfile> {
   @override
   Widget build(BuildContext context) {
     final size = MediaQuery.of(context).size;
+    // ignore: unused_local_variable
     final screenHeight = size.height;
     final screenWidth = size.width;
+    // ignore: unused_local_variable
     final statusBarHeight = MediaQuery.of(context).padding.top;
 
     // --- Consistent Typography Scale ---

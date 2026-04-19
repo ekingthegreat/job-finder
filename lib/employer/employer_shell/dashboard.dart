@@ -14,7 +14,6 @@ class EmployerDashboard extends StatefulWidget {
 
 class _EmployerDashboardState extends State<EmployerDashboard> {
   int _selectedIndex = 0;
-  Map<String, dynamic>? _userData;
   
   // Badges for messages and notifications
   final int _messageBadgeCount = 5;
@@ -49,13 +48,6 @@ class _EmployerDashboardState extends State<EmployerDashboard> {
       
       if (userId != null && fullname != null) {
         setState(() {
-          _userData = {
-            'id': userId,
-            'fullname': fullname,
-            'email': email ?? '',
-            'username': username ?? '',
-            'is_verified': isVerified,
-          };
         });
       } else {
         print('No user session found in EmployerDashboard');
@@ -65,43 +57,6 @@ class _EmployerDashboardState extends State<EmployerDashboard> {
     }
   }
 
-  void _printSessionDebug() async {
-    final prefs = await SharedPreferences.getInstance();
-    print('\n=== EMPLOYER DASHBOARD DEBUG: ALL SESSION DATA ===');
-    final keys = prefs.getKeys();
-    for (String key in keys) {
-      print('$key: ${prefs.get(key)}');
-    }
-    print('==================================================\n');
-    
-    if (mounted) {
-      showDialog(
-        context: context,
-        builder: (context) => AlertDialog(
-          title: const Text('Session Information'),
-          content: Column(
-            mainAxisSize: MainAxisSize.min,
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text('User: ${_userData?['fullname'] ?? 'Not logged in'}'),
-              Text('Email: ${_userData?['email'] ?? 'N/A'}'),
-              Text('Username: ${_userData?['username'] ?? 'N/A'}'),
-              Text('User ID: ${_userData?['id'] ?? 'N/A'}'),
-              Text('Verified: ${_userData?['is_verified'] == true ? 'Yes' : 'No'}'),
-              const Divider(),
-              const Text('Viewing as: Employer'),
-            ],
-          ),
-          actions: [
-            TextButton(
-              onPressed: () => Navigator.pop(context),
-              child: const Text('Close'),
-            ),
-          ],
-        ),
-      );
-    }
-  }
 
   @override
   Widget build(BuildContext context) {

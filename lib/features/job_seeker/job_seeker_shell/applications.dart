@@ -370,7 +370,7 @@ class _ApplicationsPageState extends State<ApplicationsPage> {
                   style: TextStyle(color: Colors.white, fontSize: 24, fontWeight: FontWeight.bold)),
                 const SizedBox(height: 4),
                 Text(
-                  _applications.length == 0 
+                  _applications.isEmpty 
                       ? 'No applications yet' 
                       : '${_applications.length} application${_applications.length > 1 ? 's' : ''} submitted',
                   style: TextStyle(color: Colors.white70, fontSize: 13)),

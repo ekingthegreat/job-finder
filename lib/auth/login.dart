@@ -58,7 +58,7 @@ class _LoginPageState extends State<LoginPage> {
     }
   }
 
-  Future<void> _handleSignIn() async {
+    Future<void> _handleSignIn() async {
     final String username = _usernameController.text.trim();
     final String password = _passwordController.text.trim();
 
@@ -67,7 +67,6 @@ class _LoginPageState extends State<LoginPage> {
       return;
     }
 
-    // Username validation (letters, numbers, underscore only, 3-20 characters)
     if (!RegExp(r'^[a-zA-Z0-9_]{3,20}$').hasMatch(username)) {
       _showSnackBar("Username must be 3-20 characters (letters, numbers, underscore)", isError: true);
       return;
@@ -78,29 +77,26 @@ class _LoginPageState extends State<LoginPage> {
     });
 
     try {
-      // Get the URL using the same method as registration
       final String apiUrl = await _getApiUrl();
-     // print('Attempting to connect to: $apiUrl');
+      print('Attempting to connect to: $apiUrl');
       
-      final response = await http.post(
-        Uri.parse(apiUrl),
-        headers: {'Content-Type': 'application/json'},
-        body: json.encode({
-          'username': username,
-          'password': password,
-        }),
-      ).timeout(const Duration(seconds: 30));
-
-    //  print('Response status code: ${response.statusCode}');
-    //  print('Response body: ${response.body}');
+      // Use form data like registration does
+      var request = http.MultipartRequest('POST', Uri.parse(apiUrl));
+      request.fields['username'] = username;
+      request.fields['password'] = password;
+      
+      var streamedResponse = await request.send();
+      var responseBody = await streamedResponse.stream.bytesToString();
+      
+      print('Response status code: ${streamedResponse.statusCode}');
+      print('Response body: $responseBody');
 
       if (!mounted) return;
 
-      if (response.statusCode == 200) {
-        final Map<String, dynamic> responseData = json.decode(response.body);
+      if (streamedResponse.statusCode == 200) {
+        final Map<String, dynamic> responseData = json.decode(responseBody);
         
         if (responseData['status'] == 'success') {
-          // The user data is inside responseData['data']['user']
           final userData = responseData['data']['user'];
           await _saveUserSession(userData);
           
@@ -116,11 +112,11 @@ class _LoginPageState extends State<LoginPage> {
           _showSnackBar(responseData['message'] ?? 'Invalid username or password', isError: true);
         }
       } else {
-        _showSnackBar('Server error: ${response.statusCode}', isError: true);
+        _showSnackBar('Server error: ${streamedResponse.statusCode}', isError: true);
       }
     } catch (e) {
       if (!mounted) return;
-    //  print('Login error details: $e');
+      print('Login error details: $e');
       _showSnackBar('Connection error. Please check your internet connection.', isError: true);
     } finally {
       if (mounted) {

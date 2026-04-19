@@ -24,6 +24,7 @@ class JobListingPage extends StatefulWidget {
 
 class _JobListingPageState extends State<JobListingPage> {
   int _selectedIndex = 0;
+  // ignore: unused_field
   Map<String, dynamic>? _userData;
 
   final List<Widget> _pages = [
@@ -391,6 +392,7 @@ class _JobListContentState extends State<_JobListContent> {
                     width: double.infinity,
                     height: 55,
                     child: ElevatedButton(
+                      // ignore: dead_code
                       onPressed: isSubmitting ? null : () async {
                         print('Submit button pressed');
                         setModalState(() => isSubmitting = true);
@@ -440,51 +442,53 @@ class _JobListContentState extends State<_JobListContent> {
     );
   }
 
-  Future<void> _submitApplication(Map<String, dynamic> job, int userId, String? userFullname, String? userEmail, String coverLetter) async {
-    try {
-      // Get API URL for submission
-      final apiUrl = await _getApiUrlForSubmission();
-      print('Submitting application to: $apiUrl');
-      
-      // Prepare the data
-      final applicationData = {
-        'job_id': job['id'],
-        'user_id': userId,
-        'user_fullname': userFullname ?? '',
-        'user_email': userEmail ?? '',
-        'cover_letter': coverLetter,
-        'status': 'pending',
-        'applied_date': DateTime.now().toIso8601String(),
-      };
-      
-      print('Application data: $applicationData');
-      
-      // Send to backend
-      final response = await http.post(
-        Uri.parse(apiUrl),
-        headers: {'Content-Type': 'application/json'},
-        body: json.encode(applicationData),
-      );
-      
-      print('Submission response status: ${response.statusCode}');
-      print('Submission response body: ${response.body}');
-      
-      if (response.statusCode == 200) {
-        final data = json.decode(response.body);
-        if (data['status'] == 'success') {
-          print('Application submitted successfully');
-        } else {
-          print('Application submission failed: ${data['message']}');
-        }
+    Future<void> _submitApplication(Map<String, dynamic> job, int userId, String? userFullname, String? userEmail, String coverLetter) async {
+  try {
+    final apiUrl = await _getApiUrlForSubmission();
+    print('Submitting application to: $apiUrl');
+    
+    // Prepare the data - match what your PHP expects
+    final applicationData = {
+      'job_id': job['id'],
+      'user_id': userId,
+      'cover_letter': coverLetter,
+    };
+    
+    print('Application data: ${json.encode(applicationData)}');
+    
+    final response = await http.post(
+      Uri.parse(apiUrl),
+      headers: {
+        'Content-Type': 'application/json',
+        'Accept': 'application/json',
+      },
+      body: json.encode(applicationData),
+    ).timeout(const Duration(seconds: 30));
+    
+    print('Submission response status: ${response.statusCode}');
+    print('Submission response body: ${response.body}');
+    
+    if (response.statusCode == 200) {
+      final data = json.decode(response.body);
+      if (data['status'] == 'success') {
+        print('Application submitted successfully');
+        _showSuccess('Application submitted for ${job['title']}!');
+        
+        // Refresh the applications list if you're on that page
+        // You might want to add a callback to refresh the applications count
       } else {
-        print('Server error: ${response.statusCode}');
+        print('Application submission failed: ${data['message']}');
+        _showError(data['message'] ?? 'Failed to submit application');
       }
-    } catch (e) {
-      print('Error submitting application: $e');
-      // Even if backend fails, we'll still show success for now
-      // Remove this once backend is implemented
+    } else {
+      print('Server error: ${response.statusCode}');
+      _showError('Server error: ${response.statusCode}');
     }
+  } catch (e) {
+    print('Error submitting application: $e');
+    _showError('Connection error. Please try again.');
   }
+}
 
   Future<String> _getApiUrlForSubmission() async {
     try {

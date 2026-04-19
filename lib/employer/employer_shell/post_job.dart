@@ -15,7 +15,7 @@ class PostJobPage extends StatefulWidget {
 class _PostJobPageState extends State<PostJobPage> {
   Map<String, dynamic>? _userData;
   List<Map<String, dynamic>> _myPostedJobs = [];
-  Map<String, List<Map<String, dynamic>>> _jobApplicants = {};
+  final Map<String, List<Map<String, dynamic>>> _jobApplicants = {};
   bool _isLoading = false;
   bool _isDeleting = false;
   
@@ -407,7 +407,7 @@ class _PostJobPageState extends State<PostJobPage> {
       context: context,
       builder: (context) => AlertDialog(
         title: Text('${action.toUpperCase()} Job'),
-        content: Text('Are you sure you want to ${action} this job posting?'),
+        content: Text('Are you sure you want to $action this job posting?'),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(context, false),
@@ -445,14 +445,14 @@ class _PostJobPageState extends State<PostJobPage> {
           await _loadMyJobs();
           _showSuccess('Job ${action}ed successfully');
         } else {
-          _showError(data['message'] ?? 'Failed to ${action} job');
+          _showError(data['message'] ?? 'Failed to $action job');
         }
       } else {
-        _showError('Failed to ${action} job');
+        _showError('Failed to $action job');
       }
     } catch (e) {
       print('Error toggling job status: $e');
-      _showError('Failed to ${action} job');
+      _showError('Failed to $action job');
     } finally {
       setState(() => _isLoading = false);
     }
@@ -733,7 +733,7 @@ class _PostJobPageState extends State<PostJobPage> {
             children: [
               Expanded(
                 child: DropdownButtonFormField<String>(
-                  value: _selectedType,
+                  initialValue: _selectedType,
                   items: ['Full-time', 'Part-time', 'Remote', 'Contract'].map((t) => DropdownMenuItem(value: t, child: Text(t))).toList(),
                   onChanged: (val) {
                     setState(() {

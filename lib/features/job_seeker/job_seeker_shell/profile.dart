@@ -2,7 +2,6 @@ import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 // Ensure this path matches your project structure
 import '../../../employer/employer_shell/dashboard.dart';
-import '../../../auth/login.dart';
 
 class ProfilePage extends StatefulWidget {
   const ProfilePage({super.key});
@@ -55,10 +54,10 @@ class _ProfilePageState extends State<ProfilePage> {
         setState(() {
           _isLoading = false;
         });
-        print('No user session found - using default values');
+   //     print('No user session found - using default values');
       }
     } catch (e) {
-      print('Error loading user session: $e');
+  //    print('Error loading user session: $e');
       setState(() {
         _isLoading = false;
       });
@@ -112,7 +111,7 @@ class _ProfilePageState extends State<ProfilePage> {
         Navigator.pushReplacementNamed(context, '/login');
       }
     } catch (e) {
-      print('Error during logout: $e');
+  //    print('Error during logout: $e');
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
@@ -130,8 +129,10 @@ class _ProfilePageState extends State<ProfilePage> {
   @override
   Widget build(BuildContext context) {
     final size = MediaQuery.of(context).size;
+    // ignore: unused_local_variable
     final screenHeight = size.height;
     final screenWidth = size.width;
+    // ignore: unused_local_variable
     final statusBarHeight = MediaQuery.of(context).padding.top;
 
     // --- Consistent Typography Scale ---
