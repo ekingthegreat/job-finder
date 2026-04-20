@@ -26,7 +26,7 @@ class _ApplicationsPageState extends State<ApplicationsPage> {
   Future<String> _getApiUrl() async {
     try {
       if (Platform.isAndroid) {
-        return 'http://10.0.2.2/enricoso/api/myapplication.php';
+        return 'http://192.168.1.38/enricoso/api/myapplication.php';
       }
     } catch (e) {
       print('Platform detection error: $e');

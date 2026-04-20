@@ -214,7 +214,7 @@ class _JobListContentState extends State<_JobListContent> {
   Future<String> _getApiUrl() async {
     try {
       if (Platform.isAndroid) {
-        return 'http://10.0.2.2/enricoso/api/get_jobs.php';
+        return 'http://192.168.1.38/enricoso/api/get_jobs.php';
       }
     } catch (e) {
       print('Platform detection error: $e');
@@ -493,7 +493,7 @@ class _JobListContentState extends State<_JobListContent> {
   Future<String> _getApiUrlForSubmission() async {
     try {
       if (Platform.isAndroid) {
-        return 'http://10.0.2.2/enricoso/api/submit_application.php';
+        return 'http://192.168.1.38/enricoso/api/submit_application.php';
       }
     } catch (e) {
       print('Platform detection error: $e');
@@ -632,6 +632,24 @@ class _JobListContentState extends State<_JobListContent> {
     final String salary = job['salary']?.toString() ?? 'Negotiable';
     final String salaryDisplay = salary.contains('₱') ? salary : '₱$salary';
     final bool hasImage = imageUrl != null && imageUrl.isNotEmpty;
+    final screenWidth = MediaQuery.of(context).size.width;
+    final screenHeight = MediaQuery.of(context).size.height;
+    
+    // Calculate dynamic height for placeholder based on screen size
+    double placeholderHeight;
+    if (screenHeight < 600) {
+      // Small phones (e.g., iPhone SE)
+      placeholderHeight = 60;
+    } else if (screenHeight < 700) {
+      // Medium phones
+      placeholderHeight = 70;
+    } else if (screenHeight < 800) {
+      // Large phones
+      placeholderHeight = 80;
+    } else {
+      // Extra large phones
+      placeholderHeight = 100;
+    }
     
     return Container(
       margin: const EdgeInsets.all(16),
@@ -649,11 +667,46 @@ class _JobListContentState extends State<_JobListContent> {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Text(job['title'], style: const TextStyle(fontSize: 20, fontWeight: FontWeight.bold)),
-                  const SizedBox(height: 4),
-                  Text(job['company'], style: const TextStyle(fontSize: 16, color: Colors.grey)),
-                  if (job['employer_name'] != null)
-                    Text(job['employer_name'], style: TextStyle(fontSize: 12, color: Colors.grey[600])),
+                  // Updated job title with smaller font
+                  Text(
+                    job['title'], 
+                    style: TextStyle(
+                      fontSize: screenWidth < 380 ? 16 : 18,
+                      fontWeight: FontWeight.bold
+                    ),
+                    maxLines: 2,
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                  const SizedBox(height: 6),
+                  // Updated company and user display format
+                  RichText(
+                    text: TextSpan(
+                      children: [
+                        TextSpan(
+                          text: job['company'] ?? 'Company',
+                          style: TextStyle(
+                            fontSize: screenWidth < 380 ? 13 : 14, 
+                            fontWeight: FontWeight.w500, 
+                            color: Colors.black87
+                          ),
+                        ),
+                        TextSpan(
+                          text: ' | ',
+                          style: TextStyle(
+                            fontSize: screenWidth < 380 ? 12 : 13, 
+                            color: Colors.grey
+                          ),
+                        ),
+                        TextSpan(
+                          text: job['employer_name'] ?? job['posted_by'] ?? 'User',
+                          style: TextStyle(
+                            fontSize: screenWidth < 380 ? 12 : 13, 
+                            color: Colors.grey
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
                 ],
               ),
             ),
@@ -697,54 +750,24 @@ class _JobListContentState extends State<_JobListContent> {
                     const Text('Description', style: TextStyle(fontWeight: FontWeight.bold)),
                     Text(job['description'] ?? 'No description available', style: const TextStyle(color: Colors.black87, height: 1.4)),
                     const SizedBox(height: 15),
+                    // Responsive requirements container
                     Container(
-                      padding: const EdgeInsets.all(12),
-                      decoration: BoxDecoration(color: const Color(0xFFFFF5F5), borderRadius: BorderRadius.circular(10)),
-                      child: Text("Requirements: ${job['requirements'] ?? 'No specific requirements'}", style: const TextStyle(fontSize: 13)),
-                    ),
-                    if (hasImage) ...[
-                      const SizedBox(height: 15),
-                      GestureDetector(
-                        onTap: () => _showFullScreenImage(context, imageUrl),
-                        child: Hero(
-                          tag: 'jobImage$index',
-                          child: ClipRRect(
-                            borderRadius: BorderRadius.circular(12),
-                            child: Image.network(
-                              'http://localhost/$imageUrl',
-                              height: 150,
-                              width: double.infinity,
-                              fit: BoxFit.cover,
-                              errorBuilder: (_, __, ___) => Container(
-                                height: 150,
-                                color: Colors.grey[200],
-                                child: Column(
-                                  mainAxisAlignment: MainAxisAlignment.center,
-                                  children: [
-                                    Icon(Icons.broken_image, size: 40, color: Colors.grey[400]),
-                                    const SizedBox(height: 8),
-                                    Text('Image not available', style: TextStyle(color: Colors.grey[600], fontSize: 12)),
-                                  ],
-                                ),
-                              ),
-                              loadingBuilder: (context, child, loadingProgress) {
-                                if (loadingProgress == null) return child;
-                                return Container(
-                                  height: 150,
-                                  color: Colors.grey[200],
-                                  child: const Center(
-                                    child: CircularProgressIndicator(color: Color(0xFFB30000)),
-                                  ),
-                                );
-                              },
-                            ),
-                          ),
-                        ),
+                      width: double.infinity,
+                      padding: EdgeInsets.all(screenWidth < 380 ? 8 : 12),
+                      decoration: BoxDecoration(
+                        color: const Color(0xFFFFF5F5), 
+                        borderRadius: BorderRadius.circular(10)
                       ),
-                    ] else ...[
+                      child: Text(
+                        "Requirements: ${job['requirements'] ?? 'No specific requirements'}",
+                        style: TextStyle(fontSize: screenWidth < 380 ? 12 : 13),
+                      ),
+                    ),
+                    // Responsive red placeholder that adjusts based on device
+                    if (!hasImage) ...[
                       const SizedBox(height: 15),
                       Container(
-                        height: 100,
+                        height: placeholderHeight,
                         width: double.infinity,
                         decoration: BoxDecoration(
                           gradient: const LinearGradient(
@@ -757,25 +780,70 @@ class _JobListContentState extends State<_JobListContent> {
                         child: Column(
                           mainAxisAlignment: MainAxisAlignment.center,
                           children: [
-                            Icon(Icons.work_outline, size: 40, color: Colors.white.withValues(alpha: 0.8)),
+                            Icon(
+                              Icons.work_outline, 
+                              size: placeholderHeight * 0.4, // Icon size scales with container
+                              color: Colors.white.withValues(alpha: 0.8)
+                            ),
                             const SizedBox(height: 8),
                             Text(
                               job['company'] ?? 'Company',
                               style: TextStyle(
                                 color: Colors.white.withValues(alpha: 0.9),
-                                fontSize: 14,
+                                fontSize: placeholderHeight * 0.16, // Text size scales with container
                                 fontWeight: FontWeight.w600,
                               ),
+                              overflow: TextOverflow.ellipsis,
+                              maxLines: 1,
                             ),
                             const SizedBox(height: 4),
                             Text(
                               'Hiring Now!',
                               style: TextStyle(
                                 color: Colors.white.withValues(alpha: 0.7),
-                                fontSize: 12,
+                                fontSize: placeholderHeight * 0.12, // Text size scales with container
                               ),
                             ),
                           ],
+                        ),
+                      ),
+                    ] else ...[
+                      const SizedBox(height: 15),
+                      GestureDetector(
+                        onTap: () => _showFullScreenImage(context, imageUrl),
+                        child: Hero(
+                          tag: 'jobImage$index',
+                          child: ClipRRect(
+                            borderRadius: BorderRadius.circular(12),
+                            child: Image.network(
+                              'http://localhost/$imageUrl',
+                              height: screenWidth < 380 ? 120 : 150,
+                              width: double.infinity,
+                              fit: BoxFit.cover,
+                              errorBuilder: (_, __, ___) => Container(
+                                height: screenWidth < 380 ? 120 : 150,
+                                color: Colors.grey[200],
+                                child: Column(
+                                  mainAxisAlignment: MainAxisAlignment.center,
+                                  children: [
+                                    Icon(Icons.broken_image, size: screenWidth < 380 ? 30 : 40, color: Colors.grey[400]),
+                                    const SizedBox(height: 8),
+                                    Text('Image not available', style: TextStyle(color: Colors.grey[600], fontSize: screenWidth < 380 ? 10 : 12)),
+                                  ],
+                                ),
+                              ),
+                              loadingBuilder: (context, child, loadingProgress) {
+                                if (loadingProgress == null) return child;
+                                return Container(
+                                  height: screenWidth < 380 ? 120 : 150,
+                                  color: Colors.grey[200],
+                                  child: const Center(
+                                    child: CircularProgressIndicator(color: Color(0xFFB30000)),
+                                  ),
+                                );
+                              },
+                            ),
+                          ),
                         ),
                       ),
                     ],
@@ -785,17 +853,24 @@ class _JobListContentState extends State<_JobListContent> {
               ),
             ),
             Padding(
-              padding: const EdgeInsets.all(20),
+              padding: EdgeInsets.all(screenWidth < 380 ? 15 : 20),
               child: SizedBox(
                 width: double.infinity,
-                height: 50,
+                height: screenWidth < 380 ? 45 : 50,
                 child: ElevatedButton(
                   onPressed: () => _applyForJob(job),
                   style: ElevatedButton.styleFrom(
                     backgroundColor: const Color(0xFFB30000),
                     shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
                   ),
-                  child: const Text('Apply Now', style: TextStyle(color: Colors.white, fontSize: 16, fontWeight: FontWeight.bold)),
+                  child: Text(
+                    'Apply Now',
+                    style: TextStyle(
+                      color: Colors.white,
+                      fontSize: screenWidth < 380 ? 14 : 16,
+                      fontWeight: FontWeight.bold
+                    ),
+                  ),
                 ),
               ),
             ),

@@ -25,7 +25,7 @@ class _LoginPageState extends State<LoginPage> {
     try {
       if (Platform.isAndroid) {
         // For Android emulator
-        return 'http://10.0.2.2/enricoso/api/login.php';
+        return 'http://192.168.1.38/enricoso/api/login.php';
       } else if (Platform.isIOS) {
         // For iOS simulator
         return 'http://localhost/enricoso/api/login.php';
@@ -197,7 +197,7 @@ class _LoginPageState extends State<LoginPage> {
                         label: "Username",
                         icon: Icons.person_outline,
                         controller: _usernameController,
-                        hint: "johndoe123",
+                        hint: "Username",
                       ),
                       const SizedBox(height: 25),
 

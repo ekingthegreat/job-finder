@@ -50,7 +50,7 @@ class _PostJobPageState extends State<PostJobPage> {
   Future<String> _getApiUrl() async {
     try {
       if (Platform.isAndroid) {
-        return 'http://10.0.2.2/enricoso/api/jobs.php';
+        return 'http://192.168.1.38/enricoso/api/jobs.php';
       }
     } catch (e) {
       print('Platform detection error: $e');

@@ -220,7 +220,7 @@ class _RegistrationPageState extends State<RegistrationPage> {
     try {
       if (Platform.isAndroid) {
         // For Android emulator
-        apiUrl = 'http://10.0.2.2/enricoso/api/registration.php';
+        apiUrl = 'http://192.168.1.38/enricoso/api/registration.php';
       } else if (Platform.isIOS) {
         // For iOS simulator
         apiUrl = 'http://localhost/enricoso/api/registration.php';
